@@ -1,0 +1,6 @@
+{
+  "src": [
+	"../src/js/util/util.js",
+	"../src/js/index.js"
+  ]
+}
