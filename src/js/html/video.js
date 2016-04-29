@@ -35,9 +35,26 @@ function createElement(options){
 		var sourceElement = source.createElement(sources[i]);
 		element.appendChild(sourceElement);
 	}
+	if(checkVideoType(element)==null){
+		console.error('video type not supported. please use mp4/webm/ogg.');
+		return;
+	}
 	return element;
 }
 
+function checkVideoType(video){
+	if(video.canPlayType('video/mp4') === 'maybe'){
+		return 'mp4';
+	}else if(video.canPlayType('video/webm') === 'maybe'){
+		return 'webm';
+	}else if(video.canPlayType('video/ogg') === 'maybe'){
+		return 'ogg';
+	}else{
+		return null;
+	}
+}
+
 module.exports = {
-	createElement: createElement
+	createElement: createElement,
+	checkVideoType: checkVideoType
 };

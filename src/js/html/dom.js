@@ -5,7 +5,7 @@
 
 function createElement(options){
 	options = options||{};
-	var elementType = options.elementType;
+	var elementType = options.elementType||'div';
 	var id = options.id;
 	var className = options.className;
 	var element = document.createElement(elementType);

@@ -1,35 +1,24 @@
-/* global window, document */
+/* global document */
 /* jshint node: true */
 "use strict";
 
 var variables = require('./variables');
-var util = require('./util');
 var dom = require('./html');
-var THREE = require('three');
+var Player = require('./player');
 
 var namespace = variables.namespace;
 var meta = {
-	container: {
-		id: namespace+'container',
-		className: namespace+'container',
-	},
-	video: {
-		id: namespace+'video',
-		className: namespace+'video',
+	className:{
+		container: namespace+'container',
+		video: namespace+'video'
 	}
 };
 
-
 var domVideo = dom.video;
-
-
-
 
 function Video3d(options){
 	var self = this;
 	self.init(options);
-	window.console.log(util);
-	window.console.log(THREE);
 }
 Video3d.prototype = {
 	constructor: Video3d,
@@ -37,41 +26,48 @@ Video3d.prototype = {
 		var self = this;
 		options = options||{};
 		var container = options.container;
-		//var fullScreenMode = options.fullScreenMode||false; //全屏模式
+		var autoplay = options.autoplay||false;
+		var loop = options.loop||false;
 		var videoSources = options.videoSources;
 		var callbacks = options.callbacks||{};
+		//var fullScreenMode = options.fullScreenMode||false; //全屏模式
 		
 		//video texture
-		var videoElement = domVideo.createElement({
-			id: meta.video.id,
-			className: meta.video.className,
-			controls: true,
+		var video = domVideo.createElement({
+			className: meta.className.video,
 			sources: videoSources
 		});
 		
-		//canvas
-		
-		
-		
-		
-		//player
+		//container
 		if(typeof container === 'string'){
 			container = document.getElementById(container);
 		}else if(container == null){
 			container = document.createElement('div');
-			container.id = meta.container.id;
-			container.className = meta.container.className;
 			document.body.appendChild(container);
 		}
+		container.classList.add(meta.className.container);
 		
-		container.appendChild(videoElement);
+		//player
+		var player = new Player({
+			namespace: namespace,
+			container: container,
+			video: video,
+			autoplay: autoplay,
+			loop: loop,
+		});
 		
 		self.container = container;
-		self.videoElement = videoElement;
-		
+		self.video = video;
+		self.player = player;
 		if(typeof callbacks.init === 'function'){
 			callbacks.init(self);
 		}
+	},
+	play: function(){
+		this.player.control.play();
+	},
+	pause: function(){
+		this.player.control.pause();
 	}
 };
 

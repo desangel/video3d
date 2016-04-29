@@ -244,7 +244,7 @@ module.exports = function(grunt) {
 	require('load-grunt-tasks')(grunt, {
 		scope: 'devDependencies'
 	});
-	
+	require('time-grunt')(grunt);
 	//grunt.loadTasks( "build/tasks" );
 	
 	// Default task(s).
