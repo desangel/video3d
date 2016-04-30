@@ -225,6 +225,9 @@ Video3d.prototype = {
 	pause: function(){
 		this.player.control.pause();
 	},
+	stop: function(){
+		this.player.control.stop();
+	},
 	togglePlay: function(){
 		this.player.control.togglePlay();
 	}
@@ -373,6 +376,12 @@ Control.prototype = {
 		self.video.play();
 	},
 	pause: function(){
+		var self = this;
+		var target = self.btnPlay;
+		target.setAttribute('pause', '');
+		self.video.pause();
+	},
+	stop: function(){
 		var self = this;
 		var target = self.btnPlay;
 		target.setAttribute('pause', '');
@@ -535,8 +544,10 @@ function Renderer(options){
 	
 	var isStop = false;
 	function start(){
-		isStop = false;
-		tick();
+		if(!isStop){
+			isStop = false;
+			tick();
+		}
 	}
 	function stop(){
 		isStop = true;
