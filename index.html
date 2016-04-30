@@ -1,70 +1,40 @@
 ﻿<!DOCTYPE html>
-<html>
-<head>
-	<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
-	<meta name="viewport" content="width=device-width,initial-scale=1.0">
-	<meta name="keywords" content="video3d"/>
-	<meta name="description" content="video3d"/>
-	 <!-- UC强制全屏 -->
-    <meta name="full-screen" content="yes">
-    <!-- QQ强制全屏 -->
-    <meta name="x5-fullscreen" content="true">
-	<title>video3d demo</title>
-	<link rel="stylesheet" href="css/video3d.css">
-	<script src="../libs/three/three.min.js"></script>
-	<script src="js/video3d.js?id=3"></script>
-<style>
-*{ margin:0; padding:0;}
-body { position: absolute; top:0; bottom:0; left:0; width:100%; }
-.video3d-container{ position: absolute; top:0; bottom:0; left:0; width:100%;}
-.video3d-renderer{ position: absolute; top:0; bottom:36px; left:0; width:100%;}
-.video3d-control{ position:absolute; bottom: 0; left:0; width: 100%; height:36px;  background-color: rgba(31,31,31,0.8); }
-.video3d-control:after { content:" "; display:block; height:0; visibility:hidden; clear:both; }
-.video3d-control-scroll{ position:absolute; top:-10px; left:0; width: 100%; height:10px; }
-.video3d-control-scroll-bg{ width: 100%; height: 100%; background: #3A3A3A; }
-.video3d-control-scroll-bg1{ position:absolute; z-index:1; top:0; left:0; width: 0; height: 100%; background: #efefef; }
-.video3d-control-scroll-bg2{ position:absolute; z-index:2; top:0; left:0; width: 0; height: 100%; background: #3B8BC4; }
-.video3d-control-btn-play,
-.video3d-control-btn-volume,
-.video3d-control-btn-fullscreen,
-.video3d-control-txt-time
-{ width: 48px; height:100%; background: no-repeat center; background-size: 32px 32px; }
-.video3d-control-btn-play{ float:left; background-image: url(css/icons/vplay.png); border-right: 1px solid #3A3A3A;}
-.video3d-control-btn-play[pause]{  background-image: url(css/icons/vstop.png); }
-.video3d-control-btn-volume{ float: right; background-image: url(css/icons/vfullscreen1.png); border-left: 1px solid #3A3A3A;}
-.video3d-control-btn-fullscreen{ float: right; background-image: url(css/icons/vfullscreen1.png); border-left: 1px solid #3A3A3A;}
-.video3d-control-txt-time{ float: left; width:auto; line-height: 36px; }
+<html lang="en-us">
+  <head>
+    <meta charset="UTF-8">
+    <title>Video3d by desangel</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" type="text/css" href="stylesheets/normalize.css" media="screen">
+    <link href='https://fonts.googleapis.com/css?family=Open+Sans:400,700' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css" media="screen">
+    <link rel="stylesheet" type="text/css" href="stylesheets/github-light.css" media="screen">
+  </head>
+  <body>
+    <section class="page-header">
+      <h1 class="project-name">Video3d</h1>
+      <h2 class="project-tagline">A panorama video player by using html5 video and js webgl</h2>
+      <a href="https://github.com/desangel/video3d" class="btn">View on GitHub</a>
+      <a href="https://github.com/desangel/video3d/zipball/master" class="btn">Download .zip</a>
+      <a href="https://github.com/desangel/video3d/tarball/master" class="btn">Download .tar.gz</a>
+    </section>
 
-.btn-play { 
-	position: absolute; top: 50%; left: 50%; margin: -25px 0 0 -25px; width: 50px; height: 50px; 
-	1background: url(css/icons/play.png) no-repeat center; background-size: 100%;  
-	
-	text-align: center; vertical-align: top; /* white-space: nowrap; */ word-break:break-all;
-	color: #fff; background-color: #929292; background-clip: padding-box; border: 1px solid #ccc; border-radius: 3px; -webkit-appearance: button; 
-	box-sizing: border-box;  
-	cursor: pointer;-webkit-transition: all; -webkit-transition-timing-function: linear; -webkit-transition-duration: .2s; 
- 	transition: all; transition-timing-function: linear; transition-duration: .2s; 
-}
- .btn-play:active:not(:disabled){ color: #666; background-color: #fff; border: 1px solid #fe9778; } }
-</style>
-<script>
-	function onload(){
-		document.body.addEventListener('touchstart', function(){ /*just for make :active active */ });
-		document.addEventListener('touchstart', function(e){ /*fix window */ e.stopPropagation(); });
-	
-		player = new video3d({
-			container: document.getElementById('playerContainer'),
-			videoSources: [
-				{ type:'video/mp4', src: '../assets/video/960p.mp4' },
-				{ type:'video/mp4', src: 'http://www.91holy.com/h5/videos/960p.mp4' }
-			]
-		});
-		//player.play();
-	}
-</script>
-</head>
-<body onload="onload()">
-	<div id="playerContainer"></div>
-	<button class="btn-play" onclick="player.togglePlay();"></button>
-</body>
+    <section class="main-content">
+      <h1>
+        <a id="video3d" class="anchor" href="#video3d" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>video3d</h1>
+      <p>A panorama video player by using html5 video and js webgl</p>
+
+      <h2>
+        <a aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Examples</h1>
+      <p><a href="example/index.html">base use</a></p>
+
+      <footer class="site-footer">
+        <span class="site-footer-owner"><a href="https://github.com/desangel/video3d">Video3d</a> is maintained by <a href="https://github.com/desangel">desangel</a>.</span>
+
+        <span class="site-footer-credits">This page was generated by <a href="https://pages.github.com">GitHub Pages</a> using the <a href="https://github.com/jasonlong/cayman-theme">Cayman theme</a> by <a href="https://twitter.com/jasonlong">Jason Long</a>.</span>
+      </footer>
+
+    </section>
+
+  
+  </body>
 </html>
