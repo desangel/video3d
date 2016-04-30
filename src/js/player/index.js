@@ -22,11 +22,8 @@ Player.prototype = {
 			video: video
 		});
 		
+		options.renderer = renderer;
 		var control = new Control(options);
-		
-		renderer.keyframe = function(){
-			control.keyframe(renderer);
-		};
 		
 		self.control = control;
 		self.renderer = renderer;

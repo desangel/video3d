@@ -22,7 +22,7 @@
   "bugs": {
     "url": "https://github.com/desangel/video3d/issues"
   },
-  "homepage": "https://github.com/desangel/video3d#readme",
+  "homepage": "http://desangel.github.io/video3d/",
   "logo": "assets/fireball.png",
   "devDependencies": {
 		"grunt": "~0.4.5",

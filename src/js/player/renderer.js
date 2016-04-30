@@ -88,8 +88,22 @@ function Renderer(options){
 		self[i] = g[i];
 	}
 	self.keyframe = options.keyframe;
+	self.start = start;
+	self.stop = stop;
+	self.nextframe = nextframe;
 	
-	tick();
+	var isStop = false;
+	function start(){
+		isStop = false;
+		tick();
+	}
+	function stop(){
+		isStop = true;
+	}
+	var callNextframeCount = 0;
+	function nextframe(callback){
+		if(typeof callback==='function'){ callNextframeCount++; callback(self);  }
+	}
 	
 	function onDocumentMouseDown( event ) {
 		event.preventDefault();
@@ -190,8 +204,14 @@ function Renderer(options){
 	}
 
 	function tick() {
-		window.requestAnimFrame( tick );
-		render();
+		if(!isStop){
+			window.requestAnimFrame( tick );
+			render();
+			if(callNextframeCount>0){
+				nextframe();
+				callNextframeCount--;
+			}
+		}
 	}
 
 	function render(){

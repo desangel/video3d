@@ -1,6 +1,6 @@
 /*!
  * =====================================================
- * video3d v0.1.0 (https://github.com/desangel/video3d#readme)
+ * video3d v0.1.0 (http://desangel.github.io/video3d/)
  * =====================================================
  */
 /* jshint node: true */
@@ -36407,9 +36407,10 @@ Video3d.prototype = {
 module.exports = Video3d;
 global.video3d = Video3d;
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./html":2,"./player":7,"./variables":11}],6:[function(require,module,exports){
-
+},{"./html":2,"./player":7,"./variables":12}],6:[function(require,module,exports){
+/* global window, document */
 "use strict";
+require('./requestFullScreen');
 var html = require('../html');
 var dateHelper = require('../util/date');
 
@@ -36440,8 +36441,13 @@ Control.prototype = {
 		var namespace = options.namespace;
 		var container = options.container;
 		var video = options.video;
+		var renderer = options.renderer;
 		var autoplay = options.autoplay;
 		var loop = options.loop;
+		
+		renderer.keyframe = function(){
+			self.keyframe();
+		};
 		
 		var controlContainer = dom.createElement({ className: namespace+meta.className.container});
 		var scroll = dom.createElement({ className: namespace+meta.className.scroll });
@@ -36457,14 +36463,19 @@ Control.prototype = {
 		scroll.appendChild(scrollBg2);
 		controlContainer.appendChild(scroll);
 		controlContainer.appendChild(btnPlay);
-		controlContainer.appendChild(btnVolumn);
-		controlContainer.appendChild(btnFullScreen);
 		controlContainer.appendChild(txtTime);
+		
+		controlContainer.appendChild(btnFullScreen);
+		controlContainer.appendChild(btnVolumn);
+		
 		container.appendChild(controlContainer);
 		
 		btnPlay.addEventListener('click', handleBtnPlay);
+		btnFullScreen.addEventListener('click', handleBtnFullScreen);
 		
+		self.container = container;
 		self.video = video;
+		self.renderer = renderer;
 		self.scroll = scroll;
 		self.scrollBg1 = scrollBg1;
 		self.scrollBg2 = scrollBg2;
@@ -36475,17 +36486,33 @@ Control.prototype = {
 		
 		dom.addAttribute(video,'loop', loop);
 		dom.addAttribute(video,'autoplay', autoplay);
-		if(autoplay){
+		
+		video.addEventListener('canplay', function(){
 			self.play();
-		}
+			renderer.nextframe(function(){
+				self.pause();
+				if(autoplay){
+					self.play();
+				}
+			});
+		});
 		
 		function handleBtnPlay(e){
 			var target = e.target||e.srcElement;
-			var isPause = target.getAttribute('pause');
+			var isPause = target.hasAttribute('pause');
 			if(isPause){
 				self.play();
 			}else{
 				self.pause();
+			}
+		}
+		
+		function handleBtnFullScreen(){
+			var isFullScreen = container.hasAttribute('fullscreen');
+			if(isFullScreen){
+				self.cancelFullScreen();
+			}else{
+				self.requestFullScreen();
 			}
 		}
 	},
@@ -36507,18 +36534,35 @@ Control.prototype = {
 	},
 	play: function(){
 		var self = this;
+		var btnPlay = self.btnPlay;
+		btnPlay.removeAttribute('pause');
+		self.renderer.start();
 		self.video.play();
+	},
+	pause: function(){
+		var self = this;
+		var btnPlay = self.btnPlay;
+		btnPlay.setAttribute('pause', '');
+		self.renderer.stop();
+		self.video.pause();
+	},
+	requestFullScreen: function(){
+		var self = this;
+		var container = self.container;
+		container.setAttribute('fullscreen', '');
+		window.requestFullScreen(container);
+	},
+	cancelFullScreen: function(){
+		var self = this;
+		var container = self.container;
+		container.removeAttribute('fullscreen');
+		document.cancelFullScreen();
 	}
 };
 
 
-
-
-
-
-
 module.exports = Control;
-},{"../html":2,"../util/date":10}],7:[function(require,module,exports){
+},{"../html":2,"../util/date":11,"./requestFullScreen":10}],7:[function(require,module,exports){
 /**
 * player
 */
@@ -36543,11 +36587,8 @@ Player.prototype = {
 			video: video
 		});
 		
+		options.renderer = renderer;
 		var control = new Control(options);
-		
-		renderer.keyframe = function(){
-			control.keyframe(renderer);
-		};
 		
 		self.control = control;
 		self.renderer = renderer;
@@ -36646,8 +36687,22 @@ function Renderer(options){
 		self[i] = g[i];
 	}
 	self.keyframe = options.keyframe;
+	self.start = start;
+	self.stop = stop;
+	self.nextframe = nextframe;
 	
-	tick();
+	var isStop = false;
+	function start(){
+		isStop = false;
+		tick();
+	}
+	function stop(){
+		isStop = true;
+	}
+	var callNextframeCount = 0;
+	function nextframe(callback){
+		if(typeof callback==='function'){ callNextframeCount++; callback(self);  }
+	}
 	
 	function onDocumentMouseDown( event ) {
 		event.preventDefault();
@@ -36748,8 +36803,14 @@ function Renderer(options){
 	}
 
 	function tick() {
-		window.requestAnimFrame( tick );
-		render();
+		if(!isStop){
+			window.requestAnimFrame( tick );
+			render();
+			if(callNextframeCount>0){
+				nextframe();
+				callNextframeCount--;
+			}
+		}
 	}
 
 	function render(){
@@ -36816,6 +36877,38 @@ function initRequestAnimationFrame(){
 initRequestAnimationFrame();
 
 },{}],10:[function(require,module,exports){
+/* global window, document */
+"use strict";
+function initRequestFullScreen(){
+	var vendors = ['webkit', 'moz','o','ms'];
+	if(!window.requestFullScreen){
+		window.requestFullScreen = requestFullScreen;
+		hackCancelFullScreen();
+	}
+	
+	function requestFullScreen(element){
+		element.requestFullScreen = element.requestFullScreen;
+		for(var x = 0; x < vendors.length && !element.requestFullScreen; ++x) {
+			element.requestFullScreen = element[vendors[x]+'RequestFullScreen'];
+		}
+		if(arguments.length<=1){
+			element.requestFullScreen.call(element);
+		}else{
+			element.requestFullScreen.apply(element, arguments.slice(1));
+		}
+	}
+	
+	
+	function hackCancelFullScreen(){
+		document.cancelFullScreen = document.exitFullscreen||document.webkitExitFullscreen;
+		for(var x = 0; x < vendors.length && !document.cancelFullScreen; ++x) {
+			document.cancelFullScreen = document[vendors[x]+'CancelFullScreen'];
+		}
+	}
+}
+initRequestFullScreen();
+
+},{}],11:[function(require,module,exports){
 
 /**
  * 
@@ -37218,10 +37311,10 @@ var getDateHelper = function(){
 };
 
 module.exports = getDateHelper();
-},{}],11:[function(require,module,exports){
+},{}],12:[function(require,module,exports){
 
 "use strict";
 module.exports = {
 	namespace: 'video3d-'
 };
-},{}]},{},[5,11]);
+},{}]},{},[5,12]);

@@ -1,5 +1,6 @@
-
+/* global window, document */
 "use strict";
+require('./requestFullScreen');
 var html = require('../html');
 var dateHelper = require('../util/date');
 
@@ -30,8 +31,13 @@ Control.prototype = {
 		var namespace = options.namespace;
 		var container = options.container;
 		var video = options.video;
+		var renderer = options.renderer;
 		var autoplay = options.autoplay;
 		var loop = options.loop;
+		
+		renderer.keyframe = function(){
+			self.keyframe();
+		};
 		
 		var controlContainer = dom.createElement({ className: namespace+meta.className.container});
 		var scroll = dom.createElement({ className: namespace+meta.className.scroll });
@@ -47,14 +53,19 @@ Control.prototype = {
 		scroll.appendChild(scrollBg2);
 		controlContainer.appendChild(scroll);
 		controlContainer.appendChild(btnPlay);
-		controlContainer.appendChild(btnVolumn);
-		controlContainer.appendChild(btnFullScreen);
 		controlContainer.appendChild(txtTime);
+		
+		controlContainer.appendChild(btnFullScreen);
+		controlContainer.appendChild(btnVolumn);
+		
 		container.appendChild(controlContainer);
 		
 		btnPlay.addEventListener('click', handleBtnPlay);
+		btnFullScreen.addEventListener('click', handleBtnFullScreen);
 		
+		self.container = container;
 		self.video = video;
+		self.renderer = renderer;
 		self.scroll = scroll;
 		self.scrollBg1 = scrollBg1;
 		self.scrollBg2 = scrollBg2;
@@ -65,17 +76,33 @@ Control.prototype = {
 		
 		dom.addAttribute(video,'loop', loop);
 		dom.addAttribute(video,'autoplay', autoplay);
-		if(autoplay){
+		
+		video.addEventListener('canplay', function(){
 			self.play();
-		}
+			renderer.nextframe(function(){
+				self.pause();
+				if(autoplay){
+					self.play();
+				}
+			});
+		});
 		
 		function handleBtnPlay(e){
 			var target = e.target||e.srcElement;
-			var isPause = target.getAttribute('pause');
+			var isPause = target.hasAttribute('pause');
 			if(isPause){
 				self.play();
 			}else{
 				self.pause();
+			}
+		}
+		
+		function handleBtnFullScreen(){
+			var isFullScreen = container.hasAttribute('fullscreen');
+			if(isFullScreen){
+				self.cancelFullScreen();
+			}else{
+				self.requestFullScreen();
 			}
 		}
 	},
@@ -97,14 +124,31 @@ Control.prototype = {
 	},
 	play: function(){
 		var self = this;
+		var btnPlay = self.btnPlay;
+		btnPlay.removeAttribute('pause');
+		self.renderer.start();
 		self.video.play();
+	},
+	pause: function(){
+		var self = this;
+		var btnPlay = self.btnPlay;
+		btnPlay.setAttribute('pause', '');
+		self.renderer.stop();
+		self.video.pause();
+	},
+	requestFullScreen: function(){
+		var self = this;
+		var container = self.container;
+		container.setAttribute('fullscreen', '');
+		window.requestFullScreen(container);
+	},
+	cancelFullScreen: function(){
+		var self = this;
+		var container = self.container;
+		container.removeAttribute('fullscreen');
+		document.cancelFullScreen();
 	}
 };
-
-
-
-
-
 
 
 module.exports = Control;
