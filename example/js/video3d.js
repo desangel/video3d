@@ -276,6 +276,8 @@ Control.prototype = {
 		var loop = options.loop;
 		
 		video.setAttribute('webkit-playsinline','');  //行内播放
+		video.setAttribute('preload','');  //行内播放
+		
 		renderer.keyframe = function(){
 			self.keyframe();
 		};
@@ -318,6 +320,7 @@ Control.prototype = {
 		dom.addAttribute(video,'loop', loop);
 		dom.addAttribute(video,'autoplay', autoplay);
 		
+		video.load();
 		video.addEventListener('canplay', function(){
 			self.play();
 			renderer.nextframe(function(){
