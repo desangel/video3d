@@ -36400,6 +36400,9 @@ Video3d.prototype = {
 	},
 	pause: function(){
 		this.player.control.pause();
+	},
+	togglePlay: function(){
+		this.player.control.togglePlay();
 	}
 };
 
@@ -36499,12 +36502,7 @@ Control.prototype = {
 		
 		function handleBtnPlay(e){
 			var target = e.target||e.srcElement;
-			var isPause = target.hasAttribute('pause');
-			if(isPause){
-				self.play();
-			}else{
-				self.pause();
-			}
+			self.togglePlay(target);
 		}
 		
 		function handleBtnFullScreen(){
@@ -36532,30 +36530,40 @@ Control.prototype = {
 		var progress = Math.floor(currentTime/duration*10000)/100;
 		scrollBg2.style.width = progress+'%';
 	},
+	togglePlay: function(){
+		var self = this;
+		var target = self.btnPlay;
+		var isPause = target.hasAttribute('pause');
+		if(isPause){
+			self.play();
+		}else{
+			self.pause();
+		}
+	},
 	play: function(){
 		var self = this;
-		var btnPlay = self.btnPlay;
-		btnPlay.removeAttribute('pause');
+		var target = self.btnPlay;
+		target.removeAttribute('pause');
 		self.renderer.start();
 		self.video.play();
 	},
 	pause: function(){
 		var self = this;
-		var btnPlay = self.btnPlay;
-		btnPlay.setAttribute('pause', '');
+		var target = self.btnPlay;
+		target.setAttribute('pause', '');
 		self.renderer.stop();
 		self.video.pause();
 	},
 	requestFullScreen: function(){
 		var self = this;
-		var container = self.container;
-		container.setAttribute('fullscreen', '');
-		window.requestFullScreen(container);
+		var target = self.container;
+		target.setAttribute('fullscreen', '');
+		window.requestFullScreen(target);
 	},
 	cancelFullScreen: function(){
 		var self = this;
-		var container = self.container;
-		container.removeAttribute('fullscreen');
+		var target = self.container;
+		target.removeAttribute('fullscreen');
 		document.cancelFullScreen();
 	}
 };
