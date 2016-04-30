@@ -1,8 +1,8 @@
-/* global window, document */
+/* global window, document, THREE */
 "use strict";
 require('./requestAnimFrame');
 var html = require('../html');
-var THREE = require('three');
+//var THREE = require('three');
 
 var dom = html.dom;
 
@@ -94,8 +94,10 @@ function Renderer(options){
 	
 	var isStop = false;
 	function start(){
-		isStop = false;
-		tick();
+		if(!isStop){
+			isStop = false;
+			tick();
+		}
 	}
 	function stop(){
 		isStop = true;
@@ -205,8 +207,10 @@ function Renderer(options){
 
 	function tick() {
 		if(!isStop){
-			window.requestAnimFrame( tick );
 			render();
+			window.requestAnimFrame( tick );
+			
+			if(typeof self.keyframe === 'function'){ self.keyframe(self); }
 			if(callNextframeCount>0){
 				nextframe();
 				callNextframeCount--;
@@ -215,7 +219,6 @@ function Renderer(options){
 	}
 
 	function render(){
-		if(typeof self.keyframe === 'function'){ self.keyframe(self); }
 		testResize();
 		cameraLookAt();
 		

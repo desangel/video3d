@@ -160,7 +160,7 @@ module.exports = function(grunt) {
 				dest: '<%= meta.path.tempPath %>vendor.js',
 				options: {
 					//require: ['jquery'],
-					alias: { three: '../libs/three/three.js' },
+					//alias: { three: '../libs/three/three.js' },
 					banner: '<%= meta.banner.jshint.node %>'
 				}
 			},

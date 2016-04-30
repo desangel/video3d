@@ -35,6 +35,9 @@ Control.prototype = {
 		var autoplay = options.autoplay;
 		var loop = options.loop;
 		
+		video.setAttribute('webkit-playsinline','');  //行内播放
+		video.setAttribute('preload','');  //行内播放
+		
 		renderer.keyframe = function(){
 			self.keyframe();
 		};
@@ -76,25 +79,36 @@ Control.prototype = {
 		
 		dom.addAttribute(video,'loop', loop);
 		dom.addAttribute(video,'autoplay', autoplay);
+		//video.load();
 		
-		video.addEventListener('canplay', function(){
+		self.play();
+		self.pause();
+		if(autoplay){
 			self.play();
-			renderer.nextframe(function(){
-				self.pause();
-				if(autoplay){
-					self.play();
-				}
-			});
+		}
+		
+		var isInit = false;
+		video.addEventListener('canplay', function(){ //canplaythrough ios not support. 2b event
+			self.keyframe();
+			if(!isInit){
+				//self.initPlay();  //will loop this
+				isInit = true;
+			}
+		});
+		
+		video.addEventListener('ended', function(){
+			self.initPlay();
+		});
+		
+		scroll.addEventListener('click', function(e){
+			var x = e.x||e.pageX;
+			var width = scroll.offsetWidth||1;
+			self.playProcess(x/width);
 		});
 		
 		function handleBtnPlay(e){
 			var target = e.target||e.srcElement;
-			var isPause = target.hasAttribute('pause');
-			if(isPause){
-				self.play();
-			}else{
-				self.pause();
-			}
+			self.togglePlay(target);
 		}
 		
 		function handleBtnFullScreen(){
@@ -109,43 +123,76 @@ Control.prototype = {
 	keyframe: function(){  //param: renderer
 		var self = this;
 		var video = self.video;
+		var scrollBg1 = self.scrollBg1;
 		var scrollBg2 = self.scrollBg2;
 		var txtTime = self.txtTime;
 		var currentTime = video.currentTime||0;
 		var duration = video.duration||1;
+		var buffered = video.buffered;
+		var bufferedSize = buffered.length;
+		var currentBuffer = bufferedSize===0?0:buffered.end(bufferedSize-1);
+		
+		var loadProgress = Math.floor( currentBuffer/duration*10000 )/100;
+		scrollBg1.style.width = loadProgress+'%';
+		
+		var progress = Math.floor( currentTime/duration*10000 )/100;
+		scrollBg2.style.width = progress+'%';
 		
 		var currentStr = dateHelper.durationToStr(currentTime*1000, 'hh:mm:ss', 'hh');
 		var durationStr = dateHelper.durationToStr(duration*1000, 'hh:mm:ss', 'hh');
-		
 		txtTime.innerHTML = currentStr + '/' + durationStr;
-		
-		var progress = Math.floor(currentTime/duration*10000)/100;
-		scrollBg2.style.width = progress+'%';
+	},
+	initPlay: function(){
+		var self = this;
+		self.playProcess(0);
+		self.keyframe();
+		self.pause();
+	},
+	togglePlay: function(){
+		var self = this;
+		var target = self.btnPlay;
+		var isPause = target.hasAttribute('pause');
+		if(isPause){
+			self.play();
+		}else{
+			self.pause();
+		}
 	},
 	play: function(){
 		var self = this;
-		var btnPlay = self.btnPlay;
-		btnPlay.removeAttribute('pause');
+		var target = self.btnPlay;
+		target.removeAttribute('pause');
 		self.renderer.start();
 		self.video.play();
 	},
 	pause: function(){
 		var self = this;
-		var btnPlay = self.btnPlay;
-		btnPlay.setAttribute('pause', '');
-		self.renderer.stop();
+		var target = self.btnPlay;
+		target.setAttribute('pause', '');
 		self.video.pause();
+	},
+	stop: function(){
+		this.renderer.stop();
+		this.pause();
+	},
+	playProcess: function(progress){  //0 - 1
+		var self = this;
+		var video = self.video;
+		
+		var duration = video.duration;
+		var currentTime = Math.floor(duration*progress);
+		video.currentTime = currentTime;
 	},
 	requestFullScreen: function(){
 		var self = this;
-		var container = self.container;
-		container.setAttribute('fullscreen', '');
-		window.requestFullScreen(container);
+		var target = self.container;
+		target.setAttribute('fullscreen', '');
+		window.requestFullScreen(target);
 	},
 	cancelFullScreen: function(){
 		var self = this;
-		var container = self.container;
-		container.removeAttribute('fullscreen');
+		var target = self.container;
+		target.removeAttribute('fullscreen');
 		document.cancelFullScreen();
 	}
 };

@@ -2,6 +2,7 @@
 * player
 */
 "use strict";
+var Support = require('./support');
 var Renderer = require('./renderer');
 var Control = require('./control');
 
@@ -15,6 +16,14 @@ Player.prototype = {
 		var namespace = options.namespace;
 		var container = options.container;
 		var video = options.video;
+		
+		if(!Support.isSupport()){
+			Support.createMessage({
+				namespace: namespace,
+				container: container
+			});
+			return;
+		}
 		
 		var renderer = new Renderer({
 			namespace: namespace,

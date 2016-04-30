@@ -68,6 +68,12 @@ Video3d.prototype = {
 	},
 	pause: function(){
 		this.player.control.pause();
+	},
+	stop: function(){
+		this.player.control.stop();
+	},
+	togglePlay: function(){
+		this.player.control.togglePlay();
 	}
 };
 

@@ -216,6 +216,12 @@ Video3d.prototype = {
 	},
 	pause: function(){
 		this.player.control.pause();
+	},
+	stop: function(){
+		this.player.control.stop();
+	},
+	togglePlay: function(){
+		this.player.control.togglePlay();
 	}
 };
 
@@ -223,7 +229,7 @@ Video3d.prototype = {
 module.exports = Video3d;
 global.video3d = Video3d;
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./html":2,"./player":7,"./variables":12}],6:[function(require,module,exports){
+},{"./html":2,"./player":7,"./variables":14}],6:[function(require,module,exports){
 /* global window, document */
 "use strict";
 require('./requestFullScreen');
@@ -260,6 +266,9 @@ Control.prototype = {
 		var renderer = options.renderer;
 		var autoplay = options.autoplay;
 		var loop = options.loop;
+		
+		video.setAttribute('webkit-playsinline','');  //行内播放
+		video.setAttribute('preload','');  //行内播放
 		
 		renderer.keyframe = function(){
 			self.keyframe();
@@ -302,25 +311,36 @@ Control.prototype = {
 		
 		dom.addAttribute(video,'loop', loop);
 		dom.addAttribute(video,'autoplay', autoplay);
+		//video.load();
 		
-		video.addEventListener('canplay', function(){
+		self.play();
+		self.pause();
+		if(autoplay){
 			self.play();
-			renderer.nextframe(function(){
-				self.pause();
-				if(autoplay){
-					self.play();
-				}
-			});
+		}
+		
+		var isInit = false;
+		video.addEventListener('canplay', function(){ //canplaythrough ios not support. 2b event
+			self.keyframe();
+			if(!isInit){
+				//self.initPlay();  //will loop this
+				isInit = true;
+			}
+		});
+		
+		video.addEventListener('ended', function(){
+			self.initPlay();
+		});
+		
+		scroll.addEventListener('click', function(e){
+			var x = e.x||e.pageX;
+			var width = scroll.offsetWidth||1;
+			self.playProcess(x/width);
 		});
 		
 		function handleBtnPlay(e){
 			var target = e.target||e.srcElement;
-			var isPause = target.hasAttribute('pause');
-			if(isPause){
-				self.play();
-			}else{
-				self.pause();
-			}
+			self.togglePlay(target);
 		}
 		
 		function handleBtnFullScreen(){
@@ -335,54 +355,88 @@ Control.prototype = {
 	keyframe: function(){  //param: renderer
 		var self = this;
 		var video = self.video;
+		var scrollBg1 = self.scrollBg1;
 		var scrollBg2 = self.scrollBg2;
 		var txtTime = self.txtTime;
 		var currentTime = video.currentTime||0;
 		var duration = video.duration||1;
+		var buffered = video.buffered;
+		var bufferedSize = buffered.length;
+		var currentBuffer = bufferedSize===0?0:buffered.end(bufferedSize-1);
+		
+		var loadProgress = Math.floor( currentBuffer/duration*10000 )/100;
+		scrollBg1.style.width = loadProgress+'%';
+		
+		var progress = Math.floor( currentTime/duration*10000 )/100;
+		scrollBg2.style.width = progress+'%';
 		
 		var currentStr = dateHelper.durationToStr(currentTime*1000, 'hh:mm:ss', 'hh');
 		var durationStr = dateHelper.durationToStr(duration*1000, 'hh:mm:ss', 'hh');
-		
 		txtTime.innerHTML = currentStr + '/' + durationStr;
-		
-		var progress = Math.floor(currentTime/duration*10000)/100;
-		scrollBg2.style.width = progress+'%';
+	},
+	initPlay: function(){
+		var self = this;
+		self.playProcess(0);
+		self.keyframe();
+		self.pause();
+	},
+	togglePlay: function(){
+		var self = this;
+		var target = self.btnPlay;
+		var isPause = target.hasAttribute('pause');
+		if(isPause){
+			self.play();
+		}else{
+			self.pause();
+		}
 	},
 	play: function(){
 		var self = this;
-		var btnPlay = self.btnPlay;
-		btnPlay.removeAttribute('pause');
+		var target = self.btnPlay;
+		target.removeAttribute('pause');
 		self.renderer.start();
 		self.video.play();
 	},
 	pause: function(){
 		var self = this;
-		var btnPlay = self.btnPlay;
-		btnPlay.setAttribute('pause', '');
-		self.renderer.stop();
+		var target = self.btnPlay;
+		target.setAttribute('pause', '');
 		self.video.pause();
+	},
+	stop: function(){
+		this.renderer.stop();
+		this.pause();
+	},
+	playProcess: function(progress){  //0 - 1
+		var self = this;
+		var video = self.video;
+		
+		var duration = video.duration;
+		var currentTime = Math.floor(duration*progress);
+		video.currentTime = currentTime;
 	},
 	requestFullScreen: function(){
 		var self = this;
-		var container = self.container;
-		container.setAttribute('fullscreen', '');
-		window.requestFullScreen(container);
+		var target = self.container;
+		target.setAttribute('fullscreen', '');
+		window.requestFullScreen(target);
 	},
 	cancelFullScreen: function(){
 		var self = this;
-		var container = self.container;
-		container.removeAttribute('fullscreen');
+		var target = self.container;
+		target.removeAttribute('fullscreen');
 		document.cancelFullScreen();
 	}
 };
 
 
 module.exports = Control;
-},{"../html":2,"../util/date":11,"./requestFullScreen":10}],7:[function(require,module,exports){
+},{"../html":2,"../util/date":13,"./requestFullScreen":10}],7:[function(require,module,exports){
 /**
 * player
 */
 "use strict";
+var Support = require('./support');
 var Renderer = require('./renderer');
 var Control = require('./control');
 
@@ -396,6 +450,14 @@ Player.prototype = {
 		var namespace = options.namespace;
 		var container = options.container;
 		var video = options.video;
+		
+		if(!Support.isSupport()){
+			Support.createMessage({
+				namespace: namespace,
+				container: container
+			});
+			return;
+		}
 		
 		var renderer = new Renderer({
 			namespace: namespace,
@@ -412,12 +474,12 @@ Player.prototype = {
 };
 
 module.exports = Player;
-},{"./control":6,"./renderer":8}],8:[function(require,module,exports){
-/* global window, document */
+},{"./control":6,"./renderer":8,"./support":11}],8:[function(require,module,exports){
+/* global window, document, THREE */
 "use strict";
 require('./requestAnimFrame');
 var html = require('../html');
-var THREE = require('three');
+//var THREE = require('three');
 
 var dom = html.dom;
 
@@ -509,8 +571,10 @@ function Renderer(options){
 	
 	var isStop = false;
 	function start(){
-		isStop = false;
-		tick();
+		if(!isStop){
+			isStop = false;
+			tick();
+		}
 	}
 	function stop(){
 		isStop = true;
@@ -620,8 +684,10 @@ function Renderer(options){
 
 	function tick() {
 		if(!isStop){
-			window.requestAnimFrame( tick );
 			render();
+			window.requestAnimFrame( tick );
+			
+			if(typeof self.keyframe === 'function'){ self.keyframe(self); }
 			if(callNextframeCount>0){
 				nextframe();
 				callNextframeCount--;
@@ -630,7 +696,6 @@ function Renderer(options){
 	}
 
 	function render(){
-		if(typeof self.keyframe === 'function'){ self.keyframe(self); }
 		testResize();
 		cameraLookAt();
 		
@@ -660,7 +725,7 @@ function Renderer(options){
 
 
 module.exports = Renderer;
-},{"../html":2,"./requestAnimFrame":9,"three":"three"}],9:[function(require,module,exports){
+},{"../html":2,"./requestAnimFrame":9}],9:[function(require,module,exports){
 /* global window */
 "use strict";
 function initRequestAnimationFrame(){
@@ -725,6 +790,82 @@ function initRequestFullScreen(){
 initRequestFullScreen();
 
 },{}],11:[function(require,module,exports){
+
+"use strict";
+var browser = require('../util/browser');
+var html = require('../html');
+
+var dom = html.dom;
+
+var name = 'support-';
+var meta = {
+	className: {
+		container: 'support',
+		message: name+'message'
+	}
+};
+
+function isSupport(){
+	return (browser.versions.ios&&(browser.versions.weixin||browser.versions.vendor.indexOf('Google')>-1))||browser.versions.windows;//||browser.versions.chrome;
+}
+
+function createMessage(options){
+	options = options||{};
+	var namespace = options.namespace;
+	var outContainer = options.container;
+	var message = options.message!==undefined?options.message: 'Your browser does not support the player. please use iphone weichat browser!';
+	
+	var supportContainer = dom.createElement({ className: namespace+meta.className.container});
+	var supportMessage = dom.createElement({ className: namespace+meta.className.message});
+	supportMessage.innerHTML = message;
+	
+	supportContainer.appendChild(supportMessage);
+	outContainer.appendChild(supportContainer);
+}
+
+
+module.exports = {
+	isSupport: isSupport,
+	createMessage: createMessage
+};
+},{"../html":2,"../util/browser":12}],12:[function(require,module,exports){
+/* global window */
+"use strict";
+
+/**
+* check browser
+*/
+var navigator = window.navigator;
+var browser={
+    versions: (function(){
+        var u = navigator.userAgent, app = navigator.appVersion;
+		var vendor = navigator.vendor;
+        return {
+        	u: u,
+        	app: app,
+			vendor: vendor,
+            windows: u.indexOf('Windows') > -1, //windows
+            trident: u.indexOf('Trident') > -1, //IE内核
+            presto: u.indexOf('Presto') > -1, //opera内核
+            webKit: u.indexOf('AppleWebKit') > -1, //苹果、谷歌内核
+            gecko: u.indexOf('Gecko') > -1 && u.indexOf('KHTML') === -1,//火狐内核
+            chrome: u.indexOf('Chrome') > -1 ,//chrome内核
+            mobile: !!u.match(/AppleWebKit.*Mobile.*/), //是否为移动终端
+            ios: !!u.match(/\(i[^;]+;( U;)? CPU.+Mac OS X/), //ios终端
+            android: u.indexOf('Android') > -1 || u.indexOf('Linux') > -1, //android终端或者uc浏览器
+            iPhone: u.indexOf('iPhone') > -1 , //是否为iPhone或者QQHD浏览器
+            iPad: u.indexOf('iPad') > -1, //是否iPad
+            webApp: u.indexOf('Safari') === -1, //是否web应该程序，没有头部与底部
+            weixin: u.indexOf('MicroMessenger') > -1, //是否微信 （2015-01-22新增）
+            weibo: u.indexOf('Weibo') > -1, //是否微博
+            qq: u.match(/\sQQ/i) === " qq" //是否QQ
+        };
+    })(),
+    language:(navigator.browserLanguage || navigator.language).toLowerCase(),
+};
+
+module.exports = browser;
+},{}],13:[function(require,module,exports){
 
 /**
  * 
@@ -1127,10 +1268,10 @@ var getDateHelper = function(){
 };
 
 module.exports = getDateHelper();
-},{}],12:[function(require,module,exports){
+},{}],14:[function(require,module,exports){
 
 "use strict";
 module.exports = {
 	namespace: 'video3d-'
 };
-},{}]},{},[5,12]);
+},{}]},{},[5,14]);
