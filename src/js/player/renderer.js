@@ -98,6 +98,8 @@ Renderer.prototype.init = function(options){
 	var namespace = options.namespace;
 	var outContainer = options.container||document.body;
 	var video = options.video;
+	var useTouch = options.useTouch!==undefined?options.useTouch:true;
+	var useDeviceMotion = options.useDeviceMotion!==undefined?options.useDeviceMotion:false;
 	
 	var container = dom.createElement({
 		className: namespace+meta.className.container
@@ -152,6 +154,12 @@ Renderer.prototype.init = function(options){
 	canvas.addEventListener( 'touchstart', onDocumentTouchStart, false );
 	canvas.addEventListener( 'touchmove', onDocumentTouchMove, false );
 	window.addEventListener( "onorientationchange" in window ? "orientationchange" : "resize", onWindowResize, false ); 
+	if (window.DeviceMotionEvent){  
+		window.addEventListener("devicemotion", motionHandler, false);  
+	}
+	if(window.DeviceOrientationEvent){
+		window.addEventListener("deviceorientation", orientationHandler, false);  
+	}
 	//setRendererSize();
 	
 	var g = {
@@ -169,7 +177,13 @@ Renderer.prototype.init = function(options){
 	self.nextframe = nextframe;
 	
 	self.video = video;
+	self.useTouch = useTouch;
+	self.useDeviceMotion = useDeviceMotion;
 	self.material = material;
+	
+	self.getCoordinates = function(){
+		return {lon:lon, lat:lat};
+	};
 	
 	self.createTexture(video);
 	
@@ -193,7 +207,43 @@ Renderer.prototype.init = function(options){
 		if(typeof callback==='function'){ callNextframeCount++; callback(self);  }
 	}
 	
+	function motionHandler(){
+		//document.getElementById("interval").innerHTML = event.interval;  
+		//var acc = event.acceleration;  
+		//document.getElementById("x").innerHTML = acc.x;  
+		//document.getElementById("y").innerHTML = acc.y;  
+		//document.getElementById("z").innerHTML = acc.z;  
+		//var accGravity = event.accelerationIncludingGravity;  
+		//document.getElementById("xg").innerHTML = accGravity.x;  
+		//document.getElementById("yg").innerHTML = accGravity.y;  
+		//document.getElementById("zg").innerHTML = accGravity.z;  
+		//var rotationRate = event.rotationRate;  
+		//document.getElementById("Ralpha").innerHTML = rotationRate.alpha;  
+		//document.getElementById("Rbeta").innerHTML = rotationRate.beta;  
+		//document.getElementById("Rgamma").innerHTML = rotationRate.gamma;  
+	}
+	
+	function orientationHandler(event){
+		if ( !self.useDeviceMotion )return;
+		var beta = event.beta; //前后
+		var gamma = event.gamma; // 左右
+		if(beta<30){
+			lat = beta;
+		}else if(beta>60){
+			lat = beta;
+		}
+		lat = beta;
+		
+		if(gamma > 20){ 
+			lon = gamma;
+		}else if(gamma < 20){
+			lon = gamma;
+		}
+		lon = gamma;
+	}
+	
 	function onDocumentMouseDown( event ) {
+		if ( !self.useTouch )return;
 		event.preventDefault();
 		isUserInteracting = true;
 
@@ -205,6 +255,7 @@ Renderer.prototype.init = function(options){
 	}
 
 	function onDocumentMouseMove( event ) {
+		if ( !self.useTouch )return;
 		if ( isUserInteracting === true ) {
 			lon = - ( onPointerDownPointerX - event.clientX ) * 0.1 + onPointerDownLon;
 			lat = - ( event.clientY - onPointerDownPointerY ) * 0.1 + onPointerDownLat;
@@ -221,6 +272,7 @@ Renderer.prototype.init = function(options){
 	}
 	
 	function onDocumentTouchStart( event ) {
+		if ( !self.useTouch )return;
 		if ( event.touches.length === 1 ) {
 			event.preventDefault();
 
@@ -238,6 +290,7 @@ Renderer.prototype.init = function(options){
 	}
 
 	function onDocumentTouchMove( event ) {
+		if ( !self.useTouch )return;
 		if ( event.touches.length === 1 ) {
 			event.preventDefault();
 
@@ -304,7 +357,6 @@ Renderer.prototype.init = function(options){
 			}
 			
 			render();
-			//window.setTimeout(tick, 20);
 			window.requestAnimFrame( tick );
 			
 			if(typeof self.keyframe === 'function'){ self.keyframe(self); }

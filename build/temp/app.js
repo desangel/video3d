@@ -290,6 +290,7 @@ var meta = {
 		scrollBg2: name+'scroll-bg2',
 		btnPlay: name+'btn-play',
 		btnVolumn: name+'btn-volume',
+		btnDrag: name+'btn-drag',
 		btnFullScreen: name+'btn-fullscreen',
 		txtTime: name+'txt-time'
 	},
@@ -328,6 +329,7 @@ Control.prototype = {
 		var scrollBg2 = dom.createElement({ className: namespace+meta.className.scrollBg2 });
 		var btnPlay = buttonDom.createElement({ className: namespace+meta.className.btnPlay });
 		var btnVolumn = buttonDom.createElement({ className: namespace+meta.className.btnVolumn });
+		var btnDrag = buttonDom.createElement({ className: namespace+meta.className.btnDrag });
 		var btnFullScreen = buttonDom.createElement({ className: namespace+meta.className.btnFullScreen });
 		var txtTime = dom.createElement({ className: namespace+meta.className.txtTime });
 		scroll.appendChild(scrollTouch);
@@ -339,6 +341,7 @@ Control.prototype = {
 		controlContainer.appendChild(btnPlay);
 		controlContainer.appendChild(txtTime);
 		controlContainer.appendChild(btnFullScreen);
+		controlContainer.appendChild(btnDrag);
 		controlContainer.appendChild(btnVolumn);
 		
 		container.appendChild(controlContainer);
@@ -352,6 +355,7 @@ Control.prototype = {
 		self.scrollBg2 = scrollBg2;
 		self.btnPlay = btnPlay;
 		self.btnVolumn = btnVolumn;
+		self.btnDrag = btnDrag;
 		self.btnFullScreen = btnFullScreen;
 		self.txtTime = txtTime;
 		
@@ -364,6 +368,8 @@ Control.prototype = {
 		if(autoplay){
 			self.play();
 		}
+		
+		self.useTouch();
 		
 		//bind event
 		var isInit = false;
@@ -431,11 +437,18 @@ Control.prototype = {
 		});
 		
 		btnPlay.addEventListener('click', handleBtnPlay);
+		btnDrag.addEventListener('click', handleBtnDrag);
 		btnFullScreen.addEventListener('click', handleBtnFullScreen);
+		
 		
 		function handleBtnPlay(e){
 			var target = e.target||e.srcElement;
 			self.togglePlay(target);
+		}
+		
+		function handleBtnDrag(e){
+			var target = e.target||e.srcElement;
+			self.toggleDrag(target);
 		}
 		
 		function handleBtnFullScreen(){
@@ -522,6 +535,34 @@ Control.prototype = {
 		var duration = video.duration;
 		var currentTime = Math.floor(duration*progress);
 		video.currentTime = currentTime;
+	},
+	toggleDrag: function(){
+		var self = this;
+		var target = self.btnDrag;
+		var type = target.getAttribute('drag_type');
+		if(type==='motion'){
+			self.useTouch();
+		}else if(window.DeviceMotionEvent){
+			self.useDeviceMotion();
+		}
+	},
+	useTouch: function(){
+		var self = this;
+		var target = self.btnDrag;
+		var renderer = self.renderer;
+		renderer.useTouch = true;
+		renderer.useDeviceMotion = false;
+		target.setAttribute('drag_type', 'touch');
+	},
+	useDeviceMotion: function(){
+		if(window.DeviceOrientationEvent){
+			var self = this;
+			var target = self.btnDrag;
+			var renderer = self.renderer;
+			renderer.useTouch = false;
+			renderer.useDeviceMotion = true;
+			target.setAttribute('drag_type', 'motion');
+		}
 	},
 	requestFullScreen: function(){
 		var self = this;
@@ -686,6 +727,8 @@ Renderer.prototype.init = function(options){
 	var namespace = options.namespace;
 	var outContainer = options.container||document.body;
 	var video = options.video;
+	var useTouch = options.useTouch!==undefined?options.useTouch:true;
+	var useDeviceMotion = options.useDeviceMotion!==undefined?options.useDeviceMotion:false;
 	
 	var container = dom.createElement({
 		className: namespace+meta.className.container
@@ -740,6 +783,12 @@ Renderer.prototype.init = function(options){
 	canvas.addEventListener( 'touchstart', onDocumentTouchStart, false );
 	canvas.addEventListener( 'touchmove', onDocumentTouchMove, false );
 	window.addEventListener( "onorientationchange" in window ? "orientationchange" : "resize", onWindowResize, false ); 
+	if (window.DeviceMotionEvent){  
+		window.addEventListener("devicemotion", motionHandler, false);  
+	}
+	if(window.DeviceOrientationEvent){
+		window.addEventListener("deviceorientation", orientationHandler, false);  
+	}
 	//setRendererSize();
 	
 	var g = {
@@ -757,7 +806,13 @@ Renderer.prototype.init = function(options){
 	self.nextframe = nextframe;
 	
 	self.video = video;
+	self.useTouch = useTouch;
+	self.useDeviceMotion = useDeviceMotion;
 	self.material = material;
+	
+	self.getCoordinates = function(){
+		return {lon:lon, lat:lat};
+	};
 	
 	self.createTexture(video);
 	
@@ -781,7 +836,43 @@ Renderer.prototype.init = function(options){
 		if(typeof callback==='function'){ callNextframeCount++; callback(self);  }
 	}
 	
+	function motionHandler(){
+		//document.getElementById("interval").innerHTML = event.interval;  
+		//var acc = event.acceleration;  
+		//document.getElementById("x").innerHTML = acc.x;  
+		//document.getElementById("y").innerHTML = acc.y;  
+		//document.getElementById("z").innerHTML = acc.z;  
+		//var accGravity = event.accelerationIncludingGravity;  
+		//document.getElementById("xg").innerHTML = accGravity.x;  
+		//document.getElementById("yg").innerHTML = accGravity.y;  
+		//document.getElementById("zg").innerHTML = accGravity.z;  
+		//var rotationRate = event.rotationRate;  
+		//document.getElementById("Ralpha").innerHTML = rotationRate.alpha;  
+		//document.getElementById("Rbeta").innerHTML = rotationRate.beta;  
+		//document.getElementById("Rgamma").innerHTML = rotationRate.gamma;  
+	}
+	
+	function orientationHandler(event){
+		if ( !self.useDeviceMotion )return;
+		var beta = event.beta; //前后
+		var gamma = event.gamma; // 左右
+		if(beta<30){
+			lat = beta;
+		}else if(beta>60){
+			lat = beta;
+		}
+		lat = beta;
+		
+		if(gamma > 20){ 
+			lon = gamma;
+		}else if(gamma < 20){
+			lon = gamma;
+		}
+		lon = gamma;
+	}
+	
 	function onDocumentMouseDown( event ) {
+		if ( !self.useTouch )return;
 		event.preventDefault();
 		isUserInteracting = true;
 
@@ -793,6 +884,7 @@ Renderer.prototype.init = function(options){
 	}
 
 	function onDocumentMouseMove( event ) {
+		if ( !self.useTouch )return;
 		if ( isUserInteracting === true ) {
 			lon = - ( onPointerDownPointerX - event.clientX ) * 0.1 + onPointerDownLon;
 			lat = - ( event.clientY - onPointerDownPointerY ) * 0.1 + onPointerDownLat;
@@ -809,6 +901,7 @@ Renderer.prototype.init = function(options){
 	}
 	
 	function onDocumentTouchStart( event ) {
+		if ( !self.useTouch )return;
 		if ( event.touches.length === 1 ) {
 			event.preventDefault();
 
@@ -826,6 +919,7 @@ Renderer.prototype.init = function(options){
 	}
 
 	function onDocumentTouchMove( event ) {
+		if ( !self.useTouch )return;
 		if ( event.touches.length === 1 ) {
 			event.preventDefault();
 
@@ -892,7 +986,6 @@ Renderer.prototype.init = function(options){
 			}
 			
 			render();
-			//window.setTimeout(tick, 20);
 			window.requestAnimFrame( tick );
 			
 			if(typeof self.keyframe === 'function'){ self.keyframe(self); }

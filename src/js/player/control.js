@@ -18,6 +18,7 @@ var meta = {
 		scrollBg2: name+'scroll-bg2',
 		btnPlay: name+'btn-play',
 		btnVolumn: name+'btn-volume',
+		btnDrag: name+'btn-drag',
 		btnFullScreen: name+'btn-fullscreen',
 		txtTime: name+'txt-time'
 	},
@@ -56,6 +57,7 @@ Control.prototype = {
 		var scrollBg2 = dom.createElement({ className: namespace+meta.className.scrollBg2 });
 		var btnPlay = buttonDom.createElement({ className: namespace+meta.className.btnPlay });
 		var btnVolumn = buttonDom.createElement({ className: namespace+meta.className.btnVolumn });
+		var btnDrag = buttonDom.createElement({ className: namespace+meta.className.btnDrag });
 		var btnFullScreen = buttonDom.createElement({ className: namespace+meta.className.btnFullScreen });
 		var txtTime = dom.createElement({ className: namespace+meta.className.txtTime });
 		scroll.appendChild(scrollTouch);
@@ -67,6 +69,7 @@ Control.prototype = {
 		controlContainer.appendChild(btnPlay);
 		controlContainer.appendChild(txtTime);
 		controlContainer.appendChild(btnFullScreen);
+		controlContainer.appendChild(btnDrag);
 		controlContainer.appendChild(btnVolumn);
 		
 		container.appendChild(controlContainer);
@@ -80,6 +83,7 @@ Control.prototype = {
 		self.scrollBg2 = scrollBg2;
 		self.btnPlay = btnPlay;
 		self.btnVolumn = btnVolumn;
+		self.btnDrag = btnDrag;
 		self.btnFullScreen = btnFullScreen;
 		self.txtTime = txtTime;
 		
@@ -92,6 +96,8 @@ Control.prototype = {
 		if(autoplay){
 			self.play();
 		}
+		
+		self.useTouch();
 		
 		//bind event
 		var isInit = false;
@@ -159,11 +165,18 @@ Control.prototype = {
 		});
 		
 		btnPlay.addEventListener('click', handleBtnPlay);
+		btnDrag.addEventListener('click', handleBtnDrag);
 		btnFullScreen.addEventListener('click', handleBtnFullScreen);
+		
 		
 		function handleBtnPlay(e){
 			var target = e.target||e.srcElement;
 			self.togglePlay(target);
+		}
+		
+		function handleBtnDrag(e){
+			var target = e.target||e.srcElement;
+			self.toggleDrag(target);
 		}
 		
 		function handleBtnFullScreen(){
@@ -250,6 +263,34 @@ Control.prototype = {
 		var duration = video.duration;
 		var currentTime = Math.floor(duration*progress);
 		video.currentTime = currentTime;
+	},
+	toggleDrag: function(){
+		var self = this;
+		var target = self.btnDrag;
+		var type = target.getAttribute('drag_type');
+		if(type==='motion'){
+			self.useTouch();
+		}else if(window.DeviceMotionEvent){
+			self.useDeviceMotion();
+		}
+	},
+	useTouch: function(){
+		var self = this;
+		var target = self.btnDrag;
+		var renderer = self.renderer;
+		renderer.useTouch = true;
+		renderer.useDeviceMotion = false;
+		target.setAttribute('drag_type', 'touch');
+	},
+	useDeviceMotion: function(){
+		if(window.DeviceOrientationEvent){
+			var self = this;
+			var target = self.btnDrag;
+			var renderer = self.renderer;
+			renderer.useTouch = false;
+			renderer.useDeviceMotion = true;
+			target.setAttribute('drag_type', 'motion');
+		}
 	},
 	requestFullScreen: function(){
 		var self = this;
