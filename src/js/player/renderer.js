@@ -14,7 +14,86 @@ var meta = {
 	}
 };
 
-function Renderer(options){
+
+var VideoTexture = function ( video, mapping, wrapS, wrapT, magFilter, minFilter, format, type, anisotropy ) {
+	THREE.Texture.call( this, video, mapping, wrapS, wrapT, magFilter, minFilter, format, type, anisotropy );
+	this.generateMipmaps = false;
+	var scope = this;
+	function update() {
+		window.requestAnimFrame( update );
+		scope.needsUpdate = true;
+	}
+	update();
+};
+
+VideoTexture.prototype = Object.create( THREE.Texture.prototype );
+VideoTexture.prototype.constructor = VideoTexture;
+
+function Renderer(){
+	
+}
+Renderer.prototype.loadVideo = function(video){
+	var self = this;
+	self.createTexture(video);
+	/*
+	var texture = self.texture;
+	var videoImage = self.videoImage;
+	var videoImageContext = self.videoImageContext;
+	
+	self.video = video;
+	
+	videoImage.width = video.videoWidth;
+	videoImage.height = video.videoHeight;
+	videoImageContext.fillRect( 0, 0, video.videoWidth, video.videoHeight );
+	texture.needsUpdate = true;
+	*/
+};
+Renderer.prototype.createTexture = function(video){
+	var self = this;
+	var material = self.material;
+	var texture;
+	
+	//create video texture 
+	
+	texture = new VideoTexture( video );  //not play well in iphone
+	/*var videoImage = document.createElement( 'canvas' );
+	videoImage.width = video.videoWidth;
+	videoImage.height = video.videoHeight;
+	
+	var videoImageContext = videoImage.getContext( '2d' );
+	// background color if no video present
+	videoImageContext.fillStyle = '#000000';
+	videoImageContext.fillRect( 0, 0, video.videoWidth, video.videoHeight );
+	texture = new THREE.Texture( videoImage );
+	
+	self.videoImage = videoImage;
+	self.videoImageContext = videoImageContext;
+	*/
+	
+	texture.minFilter = THREE.LinearFilter;
+	texture.magFilter = THREE.LinearFilter;
+	texture.format = THREE.RGBFormat;
+	//texture.generateMipmaps = false;
+	
+	material.map = texture;
+	material.needsUpdate = true;
+	
+	self.texture = texture;
+	self.video = video;
+};
+Renderer.prototype.updateTexture = function(){
+	var self = this;
+	var texture = self.texture;
+	var video = self.video;
+	var videoImageContext = self.videoImageContext;
+	
+	if(videoImageContext&&texture){
+		videoImageContext.drawImage( video, 0, 0 );
+		texture.needsUpdate = true;
+	}
+};
+Renderer.prototype.init = function(options){
+	var self = this;
 	options = options||{};
 	var namespace = options.namespace;
 	var outContainer = options.container||document.body;
@@ -27,7 +106,7 @@ function Renderer(options){
 	
 	var scene;
 	var camera, renderer;
-	var canvas, texture;
+	var canvas;
 
 	//var controls;
 	//var INTERSECTED;
@@ -41,17 +120,14 @@ function Renderer(options){
 	
 	var canvasWidth;
 	var canvasHeight;
-	
-	texture = new THREE.VideoTexture( video );
-	texture.minFilter = THREE.LinearFilter;
-	texture.format = THREE.RGBFormat;
-	texture.generateMipmaps = false;
+	var devicePixelRatio = window.devicePixelRatio||1;
+	updateSize();
 	
 	scene = new THREE.Scene();
 	var geometry = new THREE.SphereGeometry( 500, 60, 40 );
 	geometry.scale( - 1, 1, 1 );
 	
-	var material = new THREE.MeshBasicMaterial( { map: texture } );
+	var material = new THREE.MeshBasicMaterial( { overdraw: 0.5, side:THREE.DoubleSide } );
 	var mesh = new THREE.Mesh( geometry, material );
 	//mesh.rotation.y = - Math.PI / 2;
 	scene.add( mesh );
@@ -59,7 +135,7 @@ function Renderer(options){
 	//
 	renderer = new THREE.WebGLRenderer();
 	renderer.setClearColor( 0x101010 );
-	renderer.setPixelRatio( window.devicePixelRatio );
+	renderer.setPixelRatio( devicePixelRatio );
 	renderer.setSize( canvasWidth, canvasHeight );
 	
 	canvas = renderer.domElement;
@@ -83,21 +159,31 @@ function Renderer(options){
 		camera: camera
 	};
 	
-	var self = this;
 	for(var i in g){
 		self[i] = g[i];
 	}
 	self.keyframe = options.keyframe;
 	self.start = start;
+	self.pause = pause;
 	self.stop = stop;
 	self.nextframe = nextframe;
 	
+	self.video = video;
+	self.material = material;
+	
+	self.createTexture(video);
+	
 	var isStop = false;
+	var isPause = false;
 	function start(){
-		if(!isStop){
+		if(isStop||isPause){
+			isPause = false;
 			isStop = false;
 			tick();
 		}
+	}
+	function pause(){
+		isPause = true;
 	}
 	function stop(){
 		isStop = true;
@@ -161,10 +247,14 @@ function Renderer(options){
 	}
 
 	function onWindowResize() {
+		updateSize();
+		setRendererSize();
+	}
+	
+	function updateSize(){
 		var canvasSize = getRendererSize();
 		canvasWidth = canvasSize.width;
 		canvasHeight = canvasSize.height;
-		setRendererSize();
 	}
 
 	function getRendererSize(){  //for ios & wechat
@@ -207,7 +297,14 @@ function Renderer(options){
 
 	function tick() {
 		if(!isStop){
+			if(!isPause && self.video.readyState===video.HAVE_ENOUGH_DATA){
+				//self.video.play();
+			}else{
+				//self.video.pause();
+			}
+			
 			render();
+			//window.setTimeout(tick, 20);
 			window.requestAnimFrame( tick );
 			
 			if(typeof self.keyframe === 'function'){ self.keyframe(self); }
@@ -215,15 +312,21 @@ function Renderer(options){
 				nextframe();
 				callNextframeCount--;
 			}
+		}else{
+			self.video.pause();
 		}
 	}
 
 	function render(){
 		testResize();
+		
+		self.updateTexture();
+		
 		cameraLookAt();
 		
 		renderer.setClearColor(0,0,0,0);
         renderer.render( scene, camera );
+		//renderer.context.flush();
 		function cameraLookAt(){
 			var a = 300;
 			if ( isUserInteracting === false ) {
@@ -244,7 +347,7 @@ function Renderer(options){
 			//camera.updateMatrixWorld();
 		}
 	}
-}
+};
 
 
 module.exports = Renderer;

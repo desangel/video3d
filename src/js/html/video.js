@@ -14,6 +14,7 @@ function createElement(options){
 	var height = options.height;
 	var loop = options.loop;
 	var preload = options.preload;
+	var playInline = options.playInline;
 	var src = options.src;
 	var width = options.width;
 	var sources = options.sources||[];
@@ -30,6 +31,7 @@ function createElement(options){
 	dom.addAttribute(element, 'controls', controls);
 	dom.addAttribute(element, 'loop', loop);
 	dom.addAttribute(element, 'preload', preload);
+	dom.addAttribute(element, 'webkit-playsinline', playInline);
 	
 	for(var i in sources){
 		var sourceElement = source.createElement(sources[i]);

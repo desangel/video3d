@@ -25,7 +25,8 @@ Player.prototype = {
 			return;
 		}
 		
-		var renderer = new Renderer({
+		var renderer = new Renderer();
+		renderer.init({
 			namespace: namespace,
 			container: container,
 			video: video

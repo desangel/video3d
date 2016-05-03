@@ -1,5 +1,41 @@
 /* jshint node: true */
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+/* //global document  */
+/* jshint node: true */
+"use strict";
+
+var dom = require('./dom');
+
+function createElement(options){
+	options = options||{};
+	var id = options.id;
+	var className = options.className;
+	var type = options.type||'button';
+	var name = options.name;
+	var value = options.value;
+	var html = options.html||'';
+	
+	var disabled = options.disabled;
+	var autofocus = options.autofocus;
+	
+	var element = dom.createElement({
+		id:id,
+		className:className,
+		elementType: 'button'
+	});
+	dom.setAttribute(element, 'type', type);
+	dom.setAttribute(element, 'name', name);
+	dom.setAttribute(element, 'value', value);
+	dom.addAttribute(element, 'disabled', disabled);
+	dom.addAttribute(element, 'autofocus', autofocus);
+	element.innerHTML = html;
+	return element;
+}
+
+module.exports = {
+	createElement: createElement
+};
+},{"./dom":2}],2:[function(require,module,exports){
 /* global document  */
 /* jshint node: true */
 
@@ -53,17 +89,19 @@ module.exports = {
 	elementToStr: elementToStr,
 	setAttribute: setAttribute
 };
-},{}],2:[function(require,module,exports){
+},{}],3:[function(require,module,exports){
 
 "use strict";
 var dom = require('./dom');
+var button = require('./button');
 var video = require('./video');
 
 module.exports = {
 	dom: dom,
+	button: button,
 	video: video
 };
-},{"./dom":1,"./video":4}],3:[function(require,module,exports){
+},{"./button":1,"./dom":2,"./video":5}],4:[function(require,module,exports){
 /* jshint node: true */
 
 "use strict";
@@ -83,7 +121,7 @@ function createElement(options){
 module.exports = {
 	createElement: createElement
 };
-},{"./dom":1}],4:[function(require,module,exports){
+},{"./dom":2}],5:[function(require,module,exports){
 /* //global document  */
 /* jshint node: true */
 "use strict";
@@ -100,6 +138,7 @@ function createElement(options){
 	var height = options.height;
 	var loop = options.loop;
 	var preload = options.preload;
+	var playInline = options.playInline;
 	var src = options.src;
 	var width = options.width;
 	var sources = options.sources||[];
@@ -116,6 +155,7 @@ function createElement(options){
 	dom.addAttribute(element, 'controls', controls);
 	dom.addAttribute(element, 'loop', loop);
 	dom.addAttribute(element, 'preload', preload);
+	dom.addAttribute(element, 'webkit-playsinline', playInline);
 	
 	for(var i in sources){
 		var sourceElement = source.createElement(sources[i]);
@@ -144,7 +184,7 @@ module.exports = {
 	createElement: createElement,
 	checkVideoType: checkVideoType
 };
-},{"./dom":1,"./source":3}],5:[function(require,module,exports){
+},{"./dom":2,"./source":4}],6:[function(require,module,exports){
 (function (global){
 /* global document */
 /* jshint node: true */
@@ -229,20 +269,22 @@ Video3d.prototype = {
 module.exports = Video3d;
 global.video3d = Video3d;
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./html":2,"./player":7,"./variables":14}],6:[function(require,module,exports){
+},{"./html":3,"./player":8,"./variables":15}],7:[function(require,module,exports){
 /* global window, document */
 "use strict";
 require('./requestFullScreen');
 var html = require('../html');
 var dateHelper = require('../util/date');
-
 var dom = html.dom;
+var buttonDom = html.button;
 
 var name = 'control-';
 var meta = {
 	className: {
 		container: 'control',
 		scroll: name+'scroll',
+		scrollPointer: name+'scroll-pointer',
+		scrollTouch: name+'scroll-touch',
 		scrollBg: name+'scroll-bg',
 		scrollBg1: name+'scroll-bg1',
 		scrollBg2: name+'scroll-bg2',
@@ -250,6 +292,9 @@ var meta = {
 		btnVolumn: name+'btn-volume',
 		btnFullScreen: name+'btn-fullscreen',
 		txtTime: name+'txt-time'
+	},
+	error: {
+		'notSupportFullScreen': { msg: '您的浏览器不支持全屏!' }
 	}
 };
 
@@ -276,32 +321,33 @@ Control.prototype = {
 		
 		var controlContainer = dom.createElement({ className: namespace+meta.className.container});
 		var scroll = dom.createElement({ className: namespace+meta.className.scroll });
+		var scrollTouch = dom.createElement({ className: namespace+meta.className.scrollTouch });
+		var scrollPointer = dom.createElement({ className: namespace+meta.className.scrollPointer });
 		var scrollBg = dom.createElement({ className: namespace+meta.className.scrollBg });
 		var scrollBg1 = dom.createElement({ className: namespace+meta.className.scrollBg1 });
 		var scrollBg2 = dom.createElement({ className: namespace+meta.className.scrollBg2 });
-		var btnPlay = dom.createElement({ className: namespace+meta.className.btnPlay });
-		var btnVolumn = dom.createElement({ className: namespace+meta.className.btnVolumn });
-		var btnFullScreen = dom.createElement({ className: namespace+meta.className.btnFullScreen });
+		var btnPlay = buttonDom.createElement({ className: namespace+meta.className.btnPlay });
+		var btnVolumn = buttonDom.createElement({ className: namespace+meta.className.btnVolumn });
+		var btnFullScreen = buttonDom.createElement({ className: namespace+meta.className.btnFullScreen });
 		var txtTime = dom.createElement({ className: namespace+meta.className.txtTime });
+		scroll.appendChild(scrollTouch);
+		scroll.appendChild(scrollPointer);
 		scroll.appendChild(scrollBg);
 		scroll.appendChild(scrollBg1);
 		scroll.appendChild(scrollBg2);
 		controlContainer.appendChild(scroll);
 		controlContainer.appendChild(btnPlay);
 		controlContainer.appendChild(txtTime);
-		
 		controlContainer.appendChild(btnFullScreen);
 		controlContainer.appendChild(btnVolumn);
 		
 		container.appendChild(controlContainer);
 		
-		btnPlay.addEventListener('click', handleBtnPlay);
-		btnFullScreen.addEventListener('click', handleBtnFullScreen);
-		
 		self.container = container;
 		self.video = video;
 		self.renderer = renderer;
 		self.scroll = scroll;
+		self.scrollPointer = scrollPointer;
 		self.scrollBg1 = scrollBg1;
 		self.scrollBg2 = scrollBg2;
 		self.btnPlay = btnPlay;
@@ -311,7 +357,7 @@ Control.prototype = {
 		
 		dom.addAttribute(video,'loop', loop);
 		dom.addAttribute(video,'autoplay', autoplay);
-		//video.load();
+		video.load(); // must call after setting/changing source
 		
 		self.play();
 		self.pause();
@@ -319,8 +365,17 @@ Control.prototype = {
 			self.play();
 		}
 		
+		//bind event
 		var isInit = false;
+		var isPlaying = false;
 		video.addEventListener('canplay', function(){ //canplaythrough ios not support. 2b event
+			renderer.loadVideo(video);
+			
+			if(self.isPlaying())isPlaying=true;
+			self.play();
+			if(!isPlaying)self.pause();
+			isPlaying=false;
+			
 			self.keyframe();
 			if(!isInit){
 				//self.initPlay();  //will loop this
@@ -332,11 +387,51 @@ Control.prototype = {
 			self.initPlay();
 		});
 		
+		var progress = 0;
+		var isTouchPointer = false;
 		scroll.addEventListener('click', function(e){
-			var x = e.x||e.pageX;
-			var width = scroll.offsetWidth||1;
-			self.playProcess(x/width);
+			if(isTouchPointer)return;
+			//var x = e.x||e.pageX;
+			//var width = x - scroll.offsetLeft;
+			var width = e.offsetX;
+			var total = scroll.offsetWidth||1;
+			progress = width/total;
+			progress = Math.min(Math.max(0, progress), 1);
+			self.playProcess(progress);
 		});
+		scrollPointer.addEventListener('touchstart', function(){
+			if(self.isPlaying())isPlaying=true;
+			isTouchPointer = true;
+			self.stop();
+		});
+		scrollPointer.addEventListener('touchmove', function(e){
+			if(isTouchPointer){
+				var x = e.touches[0].pageX;
+				var rect = scroll.getBoundingClientRect();
+				var width = x - rect.left;
+				var total = scroll.offsetWidth||1;
+				progress = width/total;
+				progress = Math.min(Math.max(0, progress), 1);
+				scrollPointer.style.left = progress*100 + '%';
+				scrollBg2.style.width = progress*100 + '%';
+			}
+		});
+		scrollPointer.addEventListener('touchend', function(){
+			if(isTouchPointer){
+				self.playProcess(progress);
+				
+				self.play();
+				if(isPlaying){
+					isPlaying = false;
+				}else{
+					self.pause();
+				}
+			}
+			isTouchPointer = false;
+		});
+		
+		btnPlay.addEventListener('click', handleBtnPlay);
+		btnFullScreen.addEventListener('click', handleBtnFullScreen);
 		
 		function handleBtnPlay(e){
 			var target = e.target||e.srcElement;
@@ -352,9 +447,14 @@ Control.prototype = {
 			}
 		}
 	},
+	load: function(){
+		
+		
+	},
 	keyframe: function(){  //param: renderer
 		var self = this;
 		var video = self.video;
+		var scrollPointer = self.scrollPointer;
 		var scrollBg1 = self.scrollBg1;
 		var scrollBg2 = self.scrollBg2;
 		var txtTime = self.txtTime;
@@ -368,6 +468,7 @@ Control.prototype = {
 		scrollBg1.style.width = loadProgress+'%';
 		
 		var progress = Math.floor( currentTime/duration*10000 )/100;
+		scrollPointer.style.left = progress+'%';
 		scrollBg2.style.width = progress+'%';
 		
 		var currentStr = dateHelper.durationToStr(currentTime*1000, 'hh:mm:ss', 'hh');
@@ -390,6 +491,12 @@ Control.prototype = {
 			self.pause();
 		}
 	},
+	isPlaying: function(){
+		var self = this;
+		var target = self.btnPlay;
+		var isPause = target.hasAttribute('pause');
+		return !isPause;
+	},
 	play: function(){
 		var self = this;
 		var target = self.btnPlay;
@@ -401,6 +508,7 @@ Control.prototype = {
 		var self = this;
 		var target = self.btnPlay;
 		target.setAttribute('pause', '');
+		this.renderer.pause();
 		self.video.pause();
 	},
 	stop: function(){
@@ -419,7 +527,9 @@ Control.prototype = {
 		var self = this;
 		var target = self.container;
 		target.setAttribute('fullscreen', '');
-		window.requestFullScreen(target);
+		if(!window.requestFullScreen(target)){
+			window.alert(meta.error.notSupportFullScreen.msg);
+		}
 	},
 	cancelFullScreen: function(){
 		var self = this;
@@ -431,7 +541,7 @@ Control.prototype = {
 
 
 module.exports = Control;
-},{"../html":2,"../util/date":13,"./requestFullScreen":10}],7:[function(require,module,exports){
+},{"../html":3,"../util/date":14,"./requestFullScreen":11}],8:[function(require,module,exports){
 /**
 * player
 */
@@ -459,7 +569,8 @@ Player.prototype = {
 			return;
 		}
 		
-		var renderer = new Renderer({
+		var renderer = new Renderer();
+		renderer.init({
 			namespace: namespace,
 			container: container,
 			video: video
@@ -474,7 +585,7 @@ Player.prototype = {
 };
 
 module.exports = Player;
-},{"./control":6,"./renderer":8,"./support":11}],8:[function(require,module,exports){
+},{"./control":7,"./renderer":9,"./support":12}],9:[function(require,module,exports){
 /* global window, document, THREE */
 "use strict";
 require('./requestAnimFrame');
@@ -491,7 +602,86 @@ var meta = {
 	}
 };
 
-function Renderer(options){
+
+var VideoTexture = function ( video, mapping, wrapS, wrapT, magFilter, minFilter, format, type, anisotropy ) {
+	THREE.Texture.call( this, video, mapping, wrapS, wrapT, magFilter, minFilter, format, type, anisotropy );
+	this.generateMipmaps = false;
+	var scope = this;
+	function update() {
+		window.requestAnimFrame( update );
+		scope.needsUpdate = true;
+	}
+	update();
+};
+
+VideoTexture.prototype = Object.create( THREE.Texture.prototype );
+VideoTexture.prototype.constructor = VideoTexture;
+
+function Renderer(){
+	
+}
+Renderer.prototype.loadVideo = function(video){
+	var self = this;
+	self.createTexture(video);
+	/*
+	var texture = self.texture;
+	var videoImage = self.videoImage;
+	var videoImageContext = self.videoImageContext;
+	
+	self.video = video;
+	
+	videoImage.width = video.videoWidth;
+	videoImage.height = video.videoHeight;
+	videoImageContext.fillRect( 0, 0, video.videoWidth, video.videoHeight );
+	texture.needsUpdate = true;
+	*/
+};
+Renderer.prototype.createTexture = function(video){
+	var self = this;
+	var material = self.material;
+	var texture;
+	
+	//create video texture 
+	
+	texture = new VideoTexture( video );  //not play well in iphone
+	/*var videoImage = document.createElement( 'canvas' );
+	videoImage.width = video.videoWidth;
+	videoImage.height = video.videoHeight;
+	
+	var videoImageContext = videoImage.getContext( '2d' );
+	// background color if no video present
+	videoImageContext.fillStyle = '#000000';
+	videoImageContext.fillRect( 0, 0, video.videoWidth, video.videoHeight );
+	texture = new THREE.Texture( videoImage );
+	
+	self.videoImage = videoImage;
+	self.videoImageContext = videoImageContext;
+	*/
+	
+	texture.minFilter = THREE.LinearFilter;
+	texture.magFilter = THREE.LinearFilter;
+	texture.format = THREE.RGBFormat;
+	//texture.generateMipmaps = false;
+	
+	material.map = texture;
+	material.needsUpdate = true;
+	
+	self.texture = texture;
+	self.video = video;
+};
+Renderer.prototype.updateTexture = function(){
+	var self = this;
+	var texture = self.texture;
+	var video = self.video;
+	var videoImageContext = self.videoImageContext;
+	
+	if(videoImageContext&&texture){
+		videoImageContext.drawImage( video, 0, 0 );
+		texture.needsUpdate = true;
+	}
+};
+Renderer.prototype.init = function(options){
+	var self = this;
 	options = options||{};
 	var namespace = options.namespace;
 	var outContainer = options.container||document.body;
@@ -504,7 +694,7 @@ function Renderer(options){
 	
 	var scene;
 	var camera, renderer;
-	var canvas, texture;
+	var canvas;
 
 	//var controls;
 	//var INTERSECTED;
@@ -518,17 +708,14 @@ function Renderer(options){
 	
 	var canvasWidth;
 	var canvasHeight;
-	
-	texture = new THREE.VideoTexture( video );
-	texture.minFilter = THREE.LinearFilter;
-	texture.format = THREE.RGBFormat;
-	texture.generateMipmaps = false;
+	var devicePixelRatio = window.devicePixelRatio||1;
+	updateSize();
 	
 	scene = new THREE.Scene();
 	var geometry = new THREE.SphereGeometry( 500, 60, 40 );
 	geometry.scale( - 1, 1, 1 );
 	
-	var material = new THREE.MeshBasicMaterial( { map: texture } );
+	var material = new THREE.MeshBasicMaterial( { overdraw: 0.5, side:THREE.DoubleSide } );
 	var mesh = new THREE.Mesh( geometry, material );
 	//mesh.rotation.y = - Math.PI / 2;
 	scene.add( mesh );
@@ -536,7 +723,7 @@ function Renderer(options){
 	//
 	renderer = new THREE.WebGLRenderer();
 	renderer.setClearColor( 0x101010 );
-	renderer.setPixelRatio( window.devicePixelRatio );
+	renderer.setPixelRatio( devicePixelRatio );
 	renderer.setSize( canvasWidth, canvasHeight );
 	
 	canvas = renderer.domElement;
@@ -560,21 +747,31 @@ function Renderer(options){
 		camera: camera
 	};
 	
-	var self = this;
 	for(var i in g){
 		self[i] = g[i];
 	}
 	self.keyframe = options.keyframe;
 	self.start = start;
+	self.pause = pause;
 	self.stop = stop;
 	self.nextframe = nextframe;
 	
+	self.video = video;
+	self.material = material;
+	
+	self.createTexture(video);
+	
 	var isStop = false;
+	var isPause = false;
 	function start(){
-		if(!isStop){
+		if(isStop||isPause){
+			isPause = false;
 			isStop = false;
 			tick();
 		}
+	}
+	function pause(){
+		isPause = true;
 	}
 	function stop(){
 		isStop = true;
@@ -638,10 +835,14 @@ function Renderer(options){
 	}
 
 	function onWindowResize() {
+		updateSize();
+		setRendererSize();
+	}
+	
+	function updateSize(){
 		var canvasSize = getRendererSize();
 		canvasWidth = canvasSize.width;
 		canvasHeight = canvasSize.height;
-		setRendererSize();
 	}
 
 	function getRendererSize(){  //for ios & wechat
@@ -684,7 +885,14 @@ function Renderer(options){
 
 	function tick() {
 		if(!isStop){
+			if(!isPause && self.video.readyState===video.HAVE_ENOUGH_DATA){
+				//self.video.play();
+			}else{
+				//self.video.pause();
+			}
+			
 			render();
+			//window.setTimeout(tick, 20);
 			window.requestAnimFrame( tick );
 			
 			if(typeof self.keyframe === 'function'){ self.keyframe(self); }
@@ -692,15 +900,21 @@ function Renderer(options){
 				nextframe();
 				callNextframeCount--;
 			}
+		}else{
+			self.video.pause();
 		}
 	}
 
 	function render(){
 		testResize();
+		
+		self.updateTexture();
+		
 		cameraLookAt();
 		
 		renderer.setClearColor(0,0,0,0);
         renderer.render( scene, camera );
+		//renderer.context.flush();
 		function cameraLookAt(){
 			var a = 300;
 			if ( isUserInteracting === false ) {
@@ -721,11 +935,11 @@ function Renderer(options){
 			//camera.updateMatrixWorld();
 		}
 	}
-}
+};
 
 
 module.exports = Renderer;
-},{"../html":2,"./requestAnimFrame":9}],9:[function(require,module,exports){
+},{"../html":3,"./requestAnimFrame":10}],10:[function(require,module,exports){
 /* global window */
 "use strict";
 function initRequestAnimationFrame(){
@@ -756,8 +970,7 @@ function initRequestAnimationFrame(){
 	}
 }
 initRequestAnimationFrame();
-
-},{}],10:[function(require,module,exports){
+},{}],11:[function(require,module,exports){
 /* global window, document */
 "use strict";
 function initRequestFullScreen(){
@@ -772,10 +985,16 @@ function initRequestFullScreen(){
 		for(var x = 0; x < vendors.length && !element.requestFullScreen; ++x) {
 			element.requestFullScreen = element[vendors[x]+'RequestFullScreen'];
 		}
-		if(arguments.length<=1){
-			element.requestFullScreen.call(element);
-		}else{
-			element.requestFullScreen.apply(element, arguments.slice(1));
+		if(element.requestFullScreen){
+			if(arguments.length<=1){
+				element.requestFullScreen.call(element);
+			}else{
+				element.requestFullScreen.apply(element, arguments.slice(1));
+			}
+			return true;
+		}
+		else{
+			return false;
 		}
 	}
 	
@@ -789,7 +1008,7 @@ function initRequestFullScreen(){
 }
 initRequestFullScreen();
 
-},{}],11:[function(require,module,exports){
+},{}],12:[function(require,module,exports){
 
 "use strict";
 var browser = require('../util/browser');
@@ -828,7 +1047,7 @@ module.exports = {
 	isSupport: isSupport,
 	createMessage: createMessage
 };
-},{"../html":2,"../util/browser":12}],12:[function(require,module,exports){
+},{"../html":3,"../util/browser":13}],13:[function(require,module,exports){
 /* global window */
 "use strict";
 
@@ -865,7 +1084,7 @@ var browser={
 };
 
 module.exports = browser;
-},{}],13:[function(require,module,exports){
+},{}],14:[function(require,module,exports){
 
 /**
  * 
@@ -1268,10 +1487,10 @@ var getDateHelper = function(){
 };
 
 module.exports = getDateHelper();
-},{}],14:[function(require,module,exports){
+},{}],15:[function(require,module,exports){
 
 "use strict";
 module.exports = {
 	namespace: 'video3d-'
 };
-},{}]},{},[5,14]);
+},{}]},{},[6,15]);

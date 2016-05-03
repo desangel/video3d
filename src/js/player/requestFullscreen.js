@@ -12,10 +12,16 @@ function initRequestFullScreen(){
 		for(var x = 0; x < vendors.length && !element.requestFullScreen; ++x) {
 			element.requestFullScreen = element[vendors[x]+'RequestFullScreen'];
 		}
-		if(arguments.length<=1){
-			element.requestFullScreen.call(element);
-		}else{
-			element.requestFullScreen.apply(element, arguments.slice(1));
+		if(element.requestFullScreen){
+			if(arguments.length<=1){
+				element.requestFullScreen.call(element);
+			}else{
+				element.requestFullScreen.apply(element, arguments.slice(1));
+			}
+			return true;
+		}
+		else{
+			return false;
 		}
 	}
 	

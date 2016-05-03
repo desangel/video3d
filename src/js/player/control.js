@@ -3,14 +3,16 @@
 require('./requestFullScreen');
 var html = require('../html');
 var dateHelper = require('../util/date');
-
 var dom = html.dom;
+var buttonDom = html.button;
 
 var name = 'control-';
 var meta = {
 	className: {
 		container: 'control',
 		scroll: name+'scroll',
+		scrollPointer: name+'scroll-pointer',
+		scrollTouch: name+'scroll-touch',
 		scrollBg: name+'scroll-bg',
 		scrollBg1: name+'scroll-bg1',
 		scrollBg2: name+'scroll-bg2',
@@ -18,6 +20,9 @@ var meta = {
 		btnVolumn: name+'btn-volume',
 		btnFullScreen: name+'btn-fullscreen',
 		txtTime: name+'txt-time'
+	},
+	error: {
+		'notSupportFullScreen': { msg: '您的浏览器不支持全屏!' }
 	}
 };
 
@@ -44,32 +49,33 @@ Control.prototype = {
 		
 		var controlContainer = dom.createElement({ className: namespace+meta.className.container});
 		var scroll = dom.createElement({ className: namespace+meta.className.scroll });
+		var scrollTouch = dom.createElement({ className: namespace+meta.className.scrollTouch });
+		var scrollPointer = dom.createElement({ className: namespace+meta.className.scrollPointer });
 		var scrollBg = dom.createElement({ className: namespace+meta.className.scrollBg });
 		var scrollBg1 = dom.createElement({ className: namespace+meta.className.scrollBg1 });
 		var scrollBg2 = dom.createElement({ className: namespace+meta.className.scrollBg2 });
-		var btnPlay = dom.createElement({ className: namespace+meta.className.btnPlay });
-		var btnVolumn = dom.createElement({ className: namespace+meta.className.btnVolumn });
-		var btnFullScreen = dom.createElement({ className: namespace+meta.className.btnFullScreen });
+		var btnPlay = buttonDom.createElement({ className: namespace+meta.className.btnPlay });
+		var btnVolumn = buttonDom.createElement({ className: namespace+meta.className.btnVolumn });
+		var btnFullScreen = buttonDom.createElement({ className: namespace+meta.className.btnFullScreen });
 		var txtTime = dom.createElement({ className: namespace+meta.className.txtTime });
+		scroll.appendChild(scrollTouch);
+		scroll.appendChild(scrollPointer);
 		scroll.appendChild(scrollBg);
 		scroll.appendChild(scrollBg1);
 		scroll.appendChild(scrollBg2);
 		controlContainer.appendChild(scroll);
 		controlContainer.appendChild(btnPlay);
 		controlContainer.appendChild(txtTime);
-		
 		controlContainer.appendChild(btnFullScreen);
 		controlContainer.appendChild(btnVolumn);
 		
 		container.appendChild(controlContainer);
 		
-		btnPlay.addEventListener('click', handleBtnPlay);
-		btnFullScreen.addEventListener('click', handleBtnFullScreen);
-		
 		self.container = container;
 		self.video = video;
 		self.renderer = renderer;
 		self.scroll = scroll;
+		self.scrollPointer = scrollPointer;
 		self.scrollBg1 = scrollBg1;
 		self.scrollBg2 = scrollBg2;
 		self.btnPlay = btnPlay;
@@ -79,7 +85,7 @@ Control.prototype = {
 		
 		dom.addAttribute(video,'loop', loop);
 		dom.addAttribute(video,'autoplay', autoplay);
-		//video.load();
+		video.load(); // must call after setting/changing source
 		
 		self.play();
 		self.pause();
@@ -87,8 +93,17 @@ Control.prototype = {
 			self.play();
 		}
 		
+		//bind event
 		var isInit = false;
+		var isPlaying = false;
 		video.addEventListener('canplay', function(){ //canplaythrough ios not support. 2b event
+			renderer.loadVideo(video);
+			
+			if(self.isPlaying())isPlaying=true;
+			self.play();
+			if(!isPlaying)self.pause();
+			isPlaying=false;
+			
 			self.keyframe();
 			if(!isInit){
 				//self.initPlay();  //will loop this
@@ -100,11 +115,51 @@ Control.prototype = {
 			self.initPlay();
 		});
 		
+		var progress = 0;
+		var isTouchPointer = false;
 		scroll.addEventListener('click', function(e){
-			var x = e.x||e.pageX;
-			var width = scroll.offsetWidth||1;
-			self.playProcess(x/width);
+			if(isTouchPointer)return;
+			//var x = e.x||e.pageX;
+			//var width = x - scroll.offsetLeft;
+			var width = e.offsetX;
+			var total = scroll.offsetWidth||1;
+			progress = width/total;
+			progress = Math.min(Math.max(0, progress), 1);
+			self.playProcess(progress);
 		});
+		scrollPointer.addEventListener('touchstart', function(){
+			if(self.isPlaying())isPlaying=true;
+			isTouchPointer = true;
+			self.stop();
+		});
+		scrollPointer.addEventListener('touchmove', function(e){
+			if(isTouchPointer){
+				var x = e.touches[0].pageX;
+				var rect = scroll.getBoundingClientRect();
+				var width = x - rect.left;
+				var total = scroll.offsetWidth||1;
+				progress = width/total;
+				progress = Math.min(Math.max(0, progress), 1);
+				scrollPointer.style.left = progress*100 + '%';
+				scrollBg2.style.width = progress*100 + '%';
+			}
+		});
+		scrollPointer.addEventListener('touchend', function(){
+			if(isTouchPointer){
+				self.playProcess(progress);
+				
+				self.play();
+				if(isPlaying){
+					isPlaying = false;
+				}else{
+					self.pause();
+				}
+			}
+			isTouchPointer = false;
+		});
+		
+		btnPlay.addEventListener('click', handleBtnPlay);
+		btnFullScreen.addEventListener('click', handleBtnFullScreen);
 		
 		function handleBtnPlay(e){
 			var target = e.target||e.srcElement;
@@ -120,9 +175,14 @@ Control.prototype = {
 			}
 		}
 	},
+	load: function(){
+		
+		
+	},
 	keyframe: function(){  //param: renderer
 		var self = this;
 		var video = self.video;
+		var scrollPointer = self.scrollPointer;
 		var scrollBg1 = self.scrollBg1;
 		var scrollBg2 = self.scrollBg2;
 		var txtTime = self.txtTime;
@@ -136,6 +196,7 @@ Control.prototype = {
 		scrollBg1.style.width = loadProgress+'%';
 		
 		var progress = Math.floor( currentTime/duration*10000 )/100;
+		scrollPointer.style.left = progress+'%';
 		scrollBg2.style.width = progress+'%';
 		
 		var currentStr = dateHelper.durationToStr(currentTime*1000, 'hh:mm:ss', 'hh');
@@ -158,6 +219,12 @@ Control.prototype = {
 			self.pause();
 		}
 	},
+	isPlaying: function(){
+		var self = this;
+		var target = self.btnPlay;
+		var isPause = target.hasAttribute('pause');
+		return !isPause;
+	},
 	play: function(){
 		var self = this;
 		var target = self.btnPlay;
@@ -169,6 +236,7 @@ Control.prototype = {
 		var self = this;
 		var target = self.btnPlay;
 		target.setAttribute('pause', '');
+		this.renderer.pause();
 		self.video.pause();
 	},
 	stop: function(){
@@ -187,7 +255,9 @@ Control.prototype = {
 		var self = this;
 		var target = self.container;
 		target.setAttribute('fullscreen', '');
-		window.requestFullScreen(target);
+		if(!window.requestFullScreen(target)){
+			window.alert(meta.error.notSupportFullScreen.msg);
+		}
 	},
 	cancelFullScreen: function(){
 		var self = this;
