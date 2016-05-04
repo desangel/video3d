@@ -1,6 +1,6 @@
 {
   "name": "video3d",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "A panorama video player by using html5 video and js webgl",
   "main": "index.js",
   "scripts": {

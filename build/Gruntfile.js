@@ -259,6 +259,7 @@ module.exports = function(grunt) {
 	grunt.registerTask('default', ['dev']);
 	
 	grunt.registerTask('dev-js', ['clean', 'dist-js', 'copy']);
+	grunt.registerTask('dev-css', ['clean', 'dist-css', 'copy']);
 
 	grunt.registerTask('server', ['dist','watch']);
 

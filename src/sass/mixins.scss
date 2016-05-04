@@ -5,72 +5,12 @@
 // General
 // --------------------------------------------------
 
-// Utilities
-// -------------------------
-$z-layers: (
-  "default":            1,
-  "below":             -1,
-  "max":            10000,
-  "bar": (
-    "bar":           10,
-    "btn":           20,
-    "icon":          20
-  ),
-  "backdrop":         998,
-  "modal":            999,
-  "popover":(
-    "popover":        999,
-    "arrow":          1000,
-  ),
-  "scroll": (
-    "scrollbar":      9998,
-   ),
-  "toast":            9999,
-);
-@function map-has-nested-keys($map, $keys...) {
-  @each $key in $keys {
-    @if not map-has-key($map, $key) {
-      @return false;
-    }
-    $map: map-get($map, $key);
-  }
-  
-  @return true;
-}
-
-@function map-deep-get($map, $keys...) {
-  @each $key in $keys {
-    $map: map-get($map, $key);
-  }
- 
-  @return $map;
-}
-
-@function z($layers...) {
-  @if not map-has-nested-keys($z-layers, $layers...) {
-    @warn "No layer found for `#{inspect($layers...)}` in $z-layers map. Property omitted.";
-  }
- 
-  @return map-deep-get($z-layers, $layers...);
-}
 // Clearfix
-// Source: http://nicolasgallagher.com/micro-clearfix-hack/
-//
-// For modern browsers
-// 1. The space content is one way to avoid an Opera bug when the
-//    contenteditable attribute is included anywhere else in the document.
-//    Otherwise it causes space to appear at the top and bottom of elements
-//    that are clearfixed.
-// 2. The use of `table` rather than `block` is only necessary if using
-//    `:before` to contain the top-margins of child elements.
 @mixin clearfix() {
-  &:before,
   &:after {
-    display: table; // 2
-    content: " "; // 1
-  }
-  &:after {
-    clear: both;
+    display: table;
+    content: " ";
+	clear: both;
   }
 }
 
@@ -154,59 +94,97 @@ $z-layers: (
           animation-direction: $direction;
 }
 
+// Utilities
+// -------------------------
+$z-layers: (
+	"default": 0,
+	"scroll": (
+		"bg1": 1,
+		"bg2": 2,
+		"touch": 3,
+		"pointer": 4,
+	),
+  "toast": 9999,
+  "max": 10000,
+);
+@function map-has-nested-keys($map, $keys...) {
+  @each $key in $keys {
+    @if not map-has-key($map, $key) {
+      @return false;
+    }
+    $map: map-get($map, $key);
+  }
+  
+  @return true;
+}
+
+@function map-deep-get($map, $keys...) {
+  @each $key in $keys {
+    $map: map-get($map, $key);
+  }
+ 
+  @return $map;
+}
+
+@function z($layers...) {
+  @if not map-has-nested-keys($z-layers, $layers...) {
+    @warn "No layer found for `#{inspect($layers...)}` in $z-layers map. Property omitted.";
+  }
+ 
+  @return map-deep-get($z-layers, $layers...);
+}
+
 
 // Misc
 // --------------------------------------------------
-@mixin hairline($type, $color, $offset) {
-    &:after{
-        position: absolute;
-        left: $offset;
-        right: 0;
-        bottom: 0;
-        height: 1px;
-        background-color: $color;
-        content:'';
-        -webkit-transform: scaleY(0.5);
-        transform: scaleY(0.5);
-    }
-    @if $type == double {
-        &:before{
-            position: absolute;
-            left: $offset;
-            right: 0;
-            top: 0;
-            height: 1px;
-            background-color: $color;
-            content:'';
-            -webkit-transform: scaleY(0.5);
-            transform: scaleY(0.5);
-        }
-    }
-//  background: repeat-x bottom left 
-//  url(data:image/gif;base64,R0lGODlhAQACAPABAMjHzP///yH/C1hNUCBEYXRhWE1QAz94cAAh+QQFAAABACwAAAAAAQACAAACAgwKADs=);
-//  background-size: 100% 1px;
-//@if $type == single {
-//  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100%' height='1'><rect fill='#{$color}' x='0' y='0' width='100%' height='0.5'/></svg>");
-//  background-position: $offset 100%;
-//
-//} @else if $type == double {
-//  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100%' height='1'><rect fill='#{$color}' x='0' y='0' width='100%' height='0.5'/></svg>"),
-//                    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100%' height='1'><rect fill='#{$color}' x='0' y='0' width='100%' height='0.5'/></svg>");
-//  background-position: $offset 100%, $offset 0;
-//}
-//background-repeat: no-repeat;
+
+//image background
+@function btnVolume($volume){
+	@return ($image-btn-volume+$volume+".png");
+}
+
+@function imagePath($name, $dir: $image-dir){
+	@return $dir + $name ;
+}
+
+@function imageUrl($name, $dir: $image-dir){
+	@return url(imagePath($name, $dir));
+}
+
+@mixin btnImage($url: none){
+	background: {
+		position: center;
+		size: 100%;
+		repeat: no-repeat;
+		image: $url;
+	}
 }
 
 //button
-@mixin btn($color){
+@mixin btn($color: transparent){
     color: #fff;
     background-color: $color;
-    border: 1px solid $color;
-
+	border: none; //1px solid $color;
+	
+	background-clip: padding-box;
+	-webkit-appearance: none;  //button
+	box-sizing: border-box;  
+	cursor: pointer;
+	
+	text-align: center;
+	vertical-align: top;
+	white-space: nowrap;
+	word-break:break-all;
+	
+	@include transition(all);
+	@include transition-timing-function(linear);
+	@include transition-duration(.2s);
+	
+	
     &:enabled:active,
-        &.#{$namespace}active:enabled {
+	&.#{$namespace}-active:enabled {
         color: #fff;
         background-color: darken($color, 10%);
-        border: 1px solid darken($color, 10%);
+        //border: 1px solid darken($color, 10%);
     }
 }

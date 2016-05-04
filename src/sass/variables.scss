@@ -1,7 +1,31 @@
 //
 // Variables
 // --------------------------------------------------
-$namespace: "dmui-" !default;
+$namespace: "video3d" !default;
+
+// Colors
+// --------------------------------------------------
+$color-control: rgba(31,31,31,0.8) !default;
+$color-control-scroll-bg: #3A3A3A !default;
+$color-control-scroll-bg1: #efefef !default;
+$color-control-scroll-bg2: #3B8BC4 !default;
+
+
+
+
+// Image Url
+// --------------------------------------------------
+$image-dir: "icons/" !default;
+$image-ext: "png";
+$image-scroll-pointer: "spointer.png";
+$image-btn-play: "vplay.png";
+$image-btn-play-pause: "vstop.png";
+$image-btn-volume: "volume";
+$image-btn-drag-touch: "vdrag2.png";
+$image-btn-drag-motion: "vdrag1.png";
+$image-btn-fullscreen: "vfullscreen1.png";
+
+
 
 // Type
 // --------------------------------------------------
@@ -12,54 +36,3 @@ $font-weight-light: 400 !default;
 $line-height-default: 21px !default;
 
 
-// Colors
-// --------------------------------------------------
-
-// Main theme colors
-//blue theme
-$primary-color: #007aff !default;
-//green theme
-//$primary-color: #4cd964 !default;
-//$chrome-color:  rgba(247,247,247,.98) !default;
-$chrome-color:  rgb(247,247,247) !default;
-
-// Action colors
-$default-color:  #929292 !default;
-$positive-color: #4cd964 !default;
-$negative-color: #dd524d !default;
-$warning-color: #f0ad4e !default;
-$royal-color: #8a6de9 !default;
-$grey-color:#c7c7cc !default;
-
-
-// Bars
-// --------------------------------------------------
-
-$bar-base-height:  44px !default;
-$bar-tab-height:   50px !default;
-$bar-side-spacing: 10px !default;
-
-
-// Cards
-// --------------------------------------------------
-
-$card-bg: #fff !default;
-
-
-// Buttons
-// --------------------------------------------------
-
-$button-font-size: 14px !default;
-
-
-// Transitions
-// --------------------------------------------------
-
-$timing-fuction: cubic-bezier(.1,.5,.1,1) !default; // Inspired by @c2prods
-
-
-// Borders
-// --------------------------------------------------
-
-$border-default: 1px solid #ddd !default;
-$border-radius: 6px !default;

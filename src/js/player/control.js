@@ -17,7 +17,7 @@ var meta = {
 		scrollBg1: name+'scroll-bg1',
 		scrollBg2: name+'scroll-bg2',
 		btnPlay: name+'btn-play',
-		btnVolumn: name+'btn-volume',
+		btnVolume: name+'btn-volume',
 		btnDrag: name+'btn-drag',
 		btnFullScreen: name+'btn-fullscreen',
 		txtTime: name+'txt-time'
@@ -56,7 +56,7 @@ Control.prototype = {
 		var scrollBg1 = dom.createElement({ className: namespace+meta.className.scrollBg1 });
 		var scrollBg2 = dom.createElement({ className: namespace+meta.className.scrollBg2 });
 		var btnPlay = buttonDom.createElement({ className: namespace+meta.className.btnPlay });
-		var btnVolumn = buttonDom.createElement({ className: namespace+meta.className.btnVolumn });
+		var btnVolume = buttonDom.createElement({ className: namespace+meta.className.btnVolume });
 		var btnDrag = buttonDom.createElement({ className: namespace+meta.className.btnDrag });
 		var btnFullScreen = buttonDom.createElement({ className: namespace+meta.className.btnFullScreen });
 		var txtTime = dom.createElement({ className: namespace+meta.className.txtTime });
@@ -70,7 +70,7 @@ Control.prototype = {
 		controlContainer.appendChild(txtTime);
 		controlContainer.appendChild(btnFullScreen);
 		controlContainer.appendChild(btnDrag);
-		controlContainer.appendChild(btnVolumn);
+		controlContainer.appendChild(btnVolume);
 		
 		container.appendChild(controlContainer);
 		
@@ -82,7 +82,7 @@ Control.prototype = {
 		self.scrollBg1 = scrollBg1;
 		self.scrollBg2 = scrollBg2;
 		self.btnPlay = btnPlay;
-		self.btnVolumn = btnVolumn;
+		self.btnVolume = btnVolume;
 		self.btnDrag = btnDrag;
 		self.btnFullScreen = btnFullScreen;
 		self.txtTime = txtTime;
@@ -97,6 +97,7 @@ Control.prototype = {
 			self.play();
 		}
 		
+		self.renderVolume();
 		self.useTouch();
 		
 		//bind event
@@ -119,6 +120,11 @@ Control.prototype = {
 		
 		video.addEventListener('ended', function(){
 			self.initPlay();
+		});
+		
+		video.addEventListener('volumechange', function(){
+			//no validate in mobile to set volume
+			self.renderVolume();
 		});
 		
 		var progress = 0;
@@ -165,6 +171,7 @@ Control.prototype = {
 		});
 		
 		btnPlay.addEventListener('click', handleBtnPlay);
+		btnVolume.addEventListener('click', handleBtnVolume);
 		btnDrag.addEventListener('click', handleBtnDrag);
 		btnFullScreen.addEventListener('click', handleBtnFullScreen);
 		
@@ -174,9 +181,12 @@ Control.prototype = {
 			self.togglePlay(target);
 		}
 		
-		function handleBtnDrag(e){
-			var target = e.target||e.srcElement;
-			self.toggleDrag(target);
+		function handleBtnVolume(){
+			self.toggleVolume();
+		}
+		
+		function handleBtnDrag(){
+			self.toggleDrag();
 		}
 		
 		function handleBtnFullScreen(){
@@ -263,6 +273,47 @@ Control.prototype = {
 		var duration = video.duration;
 		var currentTime = Math.floor(duration*progress);
 		video.currentTime = currentTime;
+	},
+	toggleVolume: function(){  //set muted
+		var self = this;
+		var video = self.video;
+		if(video.muted){
+			video.muted = false;
+		}else{
+			video.muted = true;
+		}
+		self.renderVolume();
+	},
+	renderVolume: function(){
+		var self = this;
+		var video = self.video;
+		var target = self.btnVolume;
+		var volume = video.volume;
+		var muted = video.muted;
+		if(muted){
+			target.setAttribute('volume', 0);
+		}else{
+			if(volume<0.333){
+				target.setAttribute('volume', 1);
+			}else if(volume>=0.333&&volume<0.667){
+				target.setAttribute('volume', 2);
+			}else{
+				target.setAttribute('volume', 3);
+			}
+		}
+	},
+	setVolume: function(volume){  //0.0 - 1.0
+		var self = this;
+		var video = self.video;
+		var target = self.btnVolume;
+		if(volume<0.333){
+			target.setAttribute('volume', 1);
+		}else if(volume>=0.333&&volume<0.667){
+			target.setAttribute('volume', 2);
+		}else{
+			target.setAttribute('volume', 3);
+		}
+		video.volume = volume;
 	},
 	toggleDrag: function(){
 		var self = this;

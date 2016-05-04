@@ -3,201 +3,137 @@
 // --------------------------------------------------
 
 // Use box sizing on all the things!
-* {
-	margin:0; 
-	padding:0; 
-	outline: none;
-    -webkit-box-sizing: border-box;
-    -moz-box-sizing: border-box;
-    box-sizing: border-box;
-	// webkit private property
-	-webkit-overflow-scrolling:touch; // help div scroll
-    -webkit-user-select: text; //user can select [none|text|all|element]
-	//-webkit-appearance: none; //改变按钮和其他控件的外观，使其类似于原生控件。 none | button | button-bevel .... 
-	-webkit-touch-callout: default;  // popup system memu when user tap [none | default]
-    -webkit-tap-highlight-color: transparent;
+
+$control-height: 36px;
+$control-border-width: 0;
+$control-scroll-height: 10px;
+$control-scroll-pointer-width: 18px;
+$control-scroll-pointer-height: 18px;
+$control-btn-width: 48px;
+$control-btn-border-left: 1px solid #3A3A3A;
+$control-btn-border-right: 1px solid #3A3A3A;
+$control-btn-background-size: 32px 32px;
+
+.#{$namespace}-container *{ 
+	margin:0;
+	padding:0;
+	outline:none;
 }
 
-// We fix position the body and scroll `.#{$namespace}content`.
-body {
-    font-family: $font-family-default;
-    font-size: $font-size-default;
-    line-height: $line-height-default;
-    color: #000;
-    background-color: #efeff4;
-    -webkit-overflow-scrolling: touch;
+.#{$namespace}-renderer{ 
+	position: absolute;
+	top:0;
+	bottom: $control-height;
+	left:0;
+	width:100%;
 }
 
-// Universal link styling
-a {
-    color: $primary-color;
-    text-decoration: none;
-
-    &:active {
-        color: darken($primary-color, 10%);
-    }
+// control
+.#{$namespace}-control{
+	position: absolute;
+	bottom: 0;
+	left:0;
+	width: 100%;
+	height: $control-height;
+	background-color: $color-control;
+	
+	@include clearfix();
 }
 
-// Wrapper to be used around all content not in .#{$namespace}bar-title and .#{$namespace}bar-tab
-.#{$namespace}content {
-    background-color: #efeff4;
-    -webkit-overflow-scrolling: touch;
+// control-scroll
+.#{$namespace}-control-scroll{ 
+	position: absolute;
+	top: - $control-scroll-height;
+	left: 0;
+	width: 100%;
+	height: $control-scroll-height;
+}
+.#{$namespace}-control-scroll-touch{ 
+	position: absolute; 
+	z-index: z("scroll", "touch");
+	bottom: 0;
+	width: 100%; 
+	height: 200%;
+}
+.#{$namespace}-control-scroll-pointer{ 
+	position:absolute;
+	z-index: z("scroll", "pointer");
+	top: 0;
+	left: 0;
+	margin: #{-($control-scroll-pointer-height - $control-scroll-height)/2} 0 0 #{-$control-scroll-pointer-width/2}; 
+	width: $control-scroll-pointer-width; 
+	height: $control-scroll-pointer-height; 
+	@include btnImage(imageUrl($image-scroll-pointer));
+}
+.#{$namespace}-control-scroll-bg{ 
+	width: 100%; 
+	height: 100%; 
+	background-color: $color-control-scroll-bg;
+}
+.#{$namespace}-control-scroll-bg1{ 
+	position: absolute; 
+	top:0; 
+	left:0; 
+	width: 0; 
+	height: 100%; 
+	z-index: z("scroll", "bg1");
+	background-color: $color-control-scroll-bg1;
+}
+.#{$namespace}-control-scroll-bg2{ 
+	position: absolute; 
+	top:0; 
+	left:0; 
+	width: 0; 
+	height: 100%; 
+	z-index: z("scroll", "bg2");
+	background-color: $color-control-scroll-bg2;
 }
 
-// Hack to force all relatively and absolutely positioned elements still render while scrolling
-// Note: This is a bug for "-webkit-overflow-scrolling: touch"
-// .#{$namespace}content > * {
-//     @include transform(translateZ(0));
-// }
-
-// Pad top/bottom of content so it doesn't hide behind bars.
-// Note: For these to work, content must come after both bars in the markup
-.#{$namespace}bar-nav ~ .#{$namespace}content {
-    padding-top: $bar-base-height;
-    &.#{$namespace}scroll-wrapper{
-     .#{$namespace}scrollbar-vertical{
-         top:$bar-base-height;
-     }
-    }
+// control-bar
+.#{$namespace}-control-btn-play,
+.#{$namespace}-control-btn-volume,
+.#{$namespace}-control-btn-drag,
+.#{$namespace}-control-btn-fullscreen{
+	@include btn();
+	@include btnImage();
+	background-size: $control-btn-background-size;
+	width: $control-btn-width; 
+	height:100%;
 }
-.#{$namespace}bar-header-secondary ~ .#{$namespace}content {
-    padding-top: ($bar-base-height*2);
-     &.#{$namespace}scroll-wrapper{
-     .#{$namespace}scrollbar-vertical{
-         top:($bar-base-height*2);
-     }
-    }
+.#{$namespace}-control-btn-play{ 
+	float:left; 
+	border-right: $control-btn-border-right;
+	background-image: imageUrl($image-btn-play);
+	&[pause]{
+		background-image: imageUrl($image-btn-play-pause);
+	}
 }
-
-// Footer bar padding
-.#{$namespace}bar-footer ~ .#{$namespace}content {
-    padding-bottom: $bar-base-height;
-     &.#{$namespace}scroll-wrapper{
-     .#{$namespace}scrollbar-vertical{
-         bottom:$bar-base-height;
-     }
-    }
+.#{$namespace}-control-btn-volume{ 
+	float: right; 
+	border-left: $control-btn-border-left;
 }
-.#{$namespace}bar-footer-secondary ~ .#{$namespace}content {
-    padding-bottom: ($bar-base-height*2);
-     &.#{$namespace}scroll-wrapper{
-     .#{$namespace}scrollbar-vertical{
-         bottom:($bar-base-height*2);
-     }
-    }
+@for $i from 0 through 3 {
+	.#{$namespace}-control-btn-volume[volume="#{$i}"] { 
+		background-image: imageUrl(btnVolume($i)); 
+	}
 }
-
-// Tab bar padding
-.#{$namespace}bar-tab ~ .#{$namespace}content {
-    padding-bottom: $bar-tab-height;
-     &.#{$namespace}scroll-wrapper{
-     .#{$namespace}scrollbar-vertical{
-         bottom:$bar-tab-height;
-     }
-    }
+.#{$namespace}-control-btn-drag{
+	float: right; 
+	border-left: $control-btn-border-left;
+	&[drag_type="touch"]{
+		background-image: imageUrl($image-btn-drag-touch);
+	}
+	&[drag_type="motion"]{
+		background-image: imageUrl($image-btn-drag-motion);
+	}
 }
-.#{$namespace}bar-footer-secondary-tab ~ .#{$namespace}content {
-    padding-bottom: ($bar-tab-height+$bar-base-height);
-     &.#{$namespace}scroll-wrapper{
-     .#{$namespace}scrollbar-vertical{
-         bottom:($bar-tab-height+$bar-base-height);
-     }
-    }
+.#{$namespace}-control-btn-fullscreen{ 
+	float: right; 
+	border-left: $control-btn-border-left;
+	background-image: imageUrl($image-btn-fullscreen);
 }
-
-// Utility classes
-
-.#{$namespace}content-padded {
-    //暂时放弃content-padded
-       margin: $bar-side-spacing;
-}
-.#{$namespace}inline {
-    display: inline-block;
-    vertical-align: top;
-}
-.#{$namespace}block {
-    display: block!important;
-}
-.#{$namespace}visibility {
-    visibility: visible!important;
-}
-.#{$namespace}hidden {
-    display: none!important;
-}
-.#{$namespace}ellipsis{
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-.#{$namespace}ellipsis-2{
-    overflow: hidden;
-    text-overflow: ellipsis;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    white-space: normal!important;
-    word-wrap: break-word;
-}
-.#{$namespace}table{
-    display: table;
-    table-layout: fixed;
-    width: 100%;
-}
-.#{$namespace}table-cell{
-    display: table-cell;
-    position: relative;
-}
-.#{$namespace}text-left{
-    text-align: left!important;
-}
-.#{$namespace}text-center{
-    text-align: center!important;
-}
-.#{$namespace}text-justify{
-    text-align: justify!important;
-}
-.#{$namespace}text-right{
-    text-align: right!important;
-}
-.#{$namespace}pull-left {
-    float: left;
-}
-.#{$namespace}pull-right {
-    float: right;
-}
-
-.#{$namespace}list-unstyled {
-    padding-left: 0;
-    list-style: none;
-}
-.#{$namespace}list-inline {
-    padding-left: 0;
-    list-style: none;
-    margin-left: -5px;
-}
-.#{$namespace}list-inline > li {
-    display: inline-block;
-    padding-left: 5px;
-    padding-right: 5px;
-}
-.#{$namespace}clearfix {
-    @include clearfix();
-}
-.#{$namespace}bg-primary {
-    background-color:$primary-color;
-}
-.#{$namespace}bg-positive{
-    background-color:$positive-color;
-}
-.#{$namespace}bg-negative{
-    background-color:$negative-color;
-}
-.#{$namespace}error{
-    margin: 88px 35px;
-    padding:10px;
-    border-radius:6px;
-    background-color:#bbb;
-}
-.#{$namespace}subtitle{
-    font-size: 15px;
+.#{$namespace}-control-txt-time{ 
+	float: left; 
+	width:auto; 
+	line-height: $control-height - $control-border-width*2; 
 }
