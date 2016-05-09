@@ -1,3 +1,46 @@
+/*global window, video3d */
+/*!
+ * video3d JavaScript Library v1.0.0
+ * https://video3d.com/
+
+ * Copyright video3d Foundation and other contributors
+ * Released under the MIT license
+ * https://github.com/desangel/video3d/license
+ *
+ * Date: 2016-05-09T10:53Z
+ */
+( function( global, factory ) {
+
+	if ( typeof module === "object" && typeof module.exports === "object" ) {
+
+		// For CommonJS and CommonJS-like environments where a proper `window`
+		// is present, execute the factory and get video3d.
+		// For environments that do not have a `window` with a `document`
+		// (such as Node.js), expose a factory as module.exports.
+		// This accentuates the need for the creation of a real `window`.
+		// e.g. var video3d = require("jquery")(window);
+		// See ticket #14549 for more info.
+		module.exports = global.document ?
+			factory( global, true ) :
+			function( w ) {
+				if ( !w.document ) {
+					throw new Error( "video3d requires a window with a document" );
+				}
+				return factory( w );
+			};
+	} else {
+		factory( global );
+	}
+
+// Pass this if window is not defined yet
+}( typeof window !== "undefined" ? window : this, function( window, noGlobal ) {
+
+// Edge <= 12 - 13+, Firefox <=18 - 45+, IE 10 - 11, Safari 5.1 - 9+, iOS 6 - 9.1
+// throw exceptions when non-strict code (e.g., ASP.NET 4.5) accesses strict mode
+// arguments.callee.caller (trac-13335). But as of video3d 3.0 (2016), strict mode should be common
+// enough that all such attempts are guarded in a try block.
+"use strict";
+
 /* jshint node: true */
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 /* //global document  */
@@ -1704,3 +1747,27 @@ module.exports = {
 	namespace: 'video3d-'
 };
 },{}]},{},[6,14]);
+
+/* global window, noGlobal, video3d */
+var
+
+	// Map over video3d in case of overwrite
+	_video3d = window.video3d;
+
+video3d.noConflict = function( deep ) {
+	if ( deep && window.video3d === video3d ) {
+		window.video3d = _video3d;
+	}
+
+	return video3d;
+};
+
+// Expose video3d and $ identifiers, even in AMD
+// and CommonJS for browser emulators (#13566)
+if ( !noGlobal ) {
+	window.video3d = video3d;
+}
+
+
+return video3d;
+} ) );

@@ -4106,7 +4106,6 @@ var meta = {
 	}
 };
 
-
 var VideoTexture = function ( video, mapping, wrapS, wrapT, magFilter, minFilter, format, type, anisotropy ) {
 	THREE.Texture.call( this, video, mapping, wrapS, wrapT, magFilter, minFilter, format, type, anisotropy );
 	this.generateMipmaps = false;
@@ -4127,18 +4126,6 @@ function Renderer(){
 Renderer.prototype.loadVideo = function(video){
 	var self = this;
 	self.createTexture(video);
-	/*
-	var texture = self.texture;
-	var videoImage = self.videoImage;
-	var videoImageContext = self.videoImageContext;
-	
-	self.video = video;
-	
-	videoImage.width = video.videoWidth;
-	videoImage.height = video.videoHeight;
-	videoImageContext.fillRect( 0, 0, video.videoWidth, video.videoHeight );
-	texture.needsUpdate = true;
-	*/
 };
 Renderer.prototype.createTexture = function(video){
 	var self = this;
@@ -4147,20 +4134,7 @@ Renderer.prototype.createTexture = function(video){
 	
 	//create video texture 
 	
-	texture = new VideoTexture( video );  //not play well in iphone
-	/*var videoImage = document.createElement( 'canvas' );
-	videoImage.width = video.videoWidth;
-	videoImage.height = video.videoHeight;
-	
-	var videoImageContext = videoImage.getContext( '2d' );
-	// background color if no video present
-	videoImageContext.fillStyle = '#000000';
-	videoImageContext.fillRect( 0, 0, video.videoWidth, video.videoHeight );
-	texture = new THREE.Texture( videoImage );
-	
-	self.videoImage = videoImage;
-	self.videoImageContext = videoImageContext;
-	*/
+	texture = new VideoTexture( video );
 	
 	texture.minFilter = THREE.LinearFilter;
 	texture.magFilter = THREE.LinearFilter;
@@ -4412,10 +4386,6 @@ Renderer.prototype.init = function(options){
 			var deltaLon = - ( onPointerDownPointerX - event.touches[0].pageX ) * 0.1;
 			var deltaLat = - ( event.touches[0].pageY - onPointerDownPointerY ) * 0.1;
 			
-			finger.lastLon = lon;
-			finger.lastLat = lat;
-			
-			
 			lon = deltaLon + onPointerDownLon;
 			lat = deltaLat + onPointerDownLat;
 			setLonLat(lon, lat);
@@ -4446,19 +4416,6 @@ Renderer.prototype.init = function(options){
 		if ( !self.useTouch )return;
 		//if ( event.changedTouches.length === 1 ) {
 		if ( touchesLength === 1 ) {
-			
-			//var x = lon + (finger.lon-finger.lastLon) * 1;
-			//var y = lat + (finger.lat-finger.lastLat) * 1;
-			
-			var x1 = lon, x2 = finger.lastLon;
-			if(x1>90&&x2<-90){
-				x2 += 360;
-			}else if(x1<-90&&x2>90){
-				x1 += 360;
-			}
-			
-			//var deltaX = x1 - x2;
-			//var deltaY = lat - finger.lastLat;
 			var deltaX = finger.deltaLon;
 			var deltaY = finger.deltaLat;
 			

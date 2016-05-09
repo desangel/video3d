@@ -24,7 +24,7 @@ module.exports = function(grunt) {
 	var	srcHintOptions = readOptionalJSON( "../src/js/.jshintrc" );
 		
 	if ( !grunt.option( "filename" ) ) {
-		grunt.option( "filename", "src/js/index.js" );
+		grunt.option( "filename", "../temp/index.js" );
 	}
 	// Project configuration.
 	grunt.initConfig({
@@ -171,14 +171,32 @@ module.exports = function(grunt) {
 				options: {
 					external: ['three', 'tween'],
 					exclude: [
-						'<%= meta.path.basePath %><%= meta.path.jsPath %>/extras/*.js'
+						'<%= meta.path.basePath %><%= meta.path.jsPath %>/exports/*.js'
 					],
 					banner: '<%= meta.banner.jshint.node %>'
 				}
 			},
-			extras: {
-				src: ['<%= meta.path.basePath %><%= meta.path.jsPath %>/extras/*.js'],
-				dest: '<%= meta.path.tempPath %>extras.js'
+			exports: {
+				src: ['<%= meta.path.basePath %><%= meta.path.jsPath %>/exports/*.js'],
+				dest: '<%= meta.path.tempPath %>exports.js',
+				options: {
+					exclude: [
+						'<%= meta.path.basePath %><%= meta.path.jsPath %>/exports/global.js',
+						'<%= meta.path.basePath %><%= meta.path.jsPath %>/exports/wrapper.js'
+					]
+				}
+			}
+		},
+		
+		//no use 
+		build: {
+			all: {
+				dest: "<%= meta.path.tempPath %>index.js",
+				minimum: [
+					"vendor",
+					"app",
+					"exports"
+				]
 			}
 		},
 		
@@ -191,7 +209,8 @@ module.exports = function(grunt) {
 				src: [
 					'<%= meta.path.tempPath %>vendor.js',
 					'<%= meta.path.tempPath %>app.js',
-					'<%= meta.path.tempPath %>extras.js'
+					'<%= meta.path.tempPath %>exports.js'
+					//'<%= meta.path.tempPath %>index.js'
 				],
 				dest: '<%= meta.path.distPath %>js/<%= pkg.name %>.js'
 			}
@@ -254,13 +273,14 @@ module.exports = function(grunt) {
 		scope: 'devDependencies'
 	});
 	require('time-grunt')(grunt);
-	//grunt.loadTasks( "build/tasks" );
+	grunt.loadTasks( "build/tasks" );
 	
 	// Default task(s).
 	grunt.registerTask('cleanAll', ['clean']);
 	
 	grunt.registerTask('lint', ['jsonlint', 'jshint', 'jscs']);
 	grunt.registerTask('dist-css', ['sass', 'csscomb', 'cssmin']);
+	//grunt.registerTask('dist-js', [ 'browserify', 'build:*:*', 'concat', 'lint', 'uglify']); 
 	grunt.registerTask('dist-js', [ 'browserify', 'concat', 'lint', 'uglify']); 
 	grunt.registerTask('dist', ['dist-css', 'dist-js', 'copy']); 
 	//grunt.registerTask('dev', ['clean', 'dist', 'clean:temp']);

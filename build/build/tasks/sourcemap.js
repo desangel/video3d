@@ -1,0 +1,14 @@
+var fs = require( "fs" );
+
+module.exports = function( grunt ) {
+	var config = grunt.config( "uglify.all.files" );
+	grunt.registerTask( "remove_map_comment", function() {
+		var minLoc = grunt.config.process( Object.keys( config )[ 0 ] );
+
+		// Remove the source map comment; it causes way too many problems.
+		// The map file is still generated for manual associations
+		var text = fs.readFileSync( minLoc, "utf8" )
+			.replace( /\/\/# sourceMappingURL=\S+/, "" );
+		fs.writeFileSync( minLoc, text );
+	} );
+};
