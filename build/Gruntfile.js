@@ -161,6 +161,7 @@ module.exports = function(grunt) {
 				options: {
 					//require: ['jquery'],
 					//alias: { three: '../libs/three/three.js' },
+					alias: { tween: '../libs/tween/tweenjs-NEXT.combined.js' },
 					banner: '<%= meta.banner.jshint.node %>'
 				}
 			},
@@ -168,9 +169,16 @@ module.exports = function(grunt) {
 				src: ['<%= meta.path.basePath %><%= meta.path.jsPath %>/*.js'],
 				dest: '<%= meta.path.tempPath %>app.js',
 				options: {
-					external: ['three'],
+					external: ['three', 'tween'],
+					exclude: [
+						'<%= meta.path.basePath %><%= meta.path.jsPath %>/extras/*.js'
+					],
 					banner: '<%= meta.banner.jshint.node %>'
 				}
+			},
+			extras: {
+				src: ['<%= meta.path.basePath %><%= meta.path.jsPath %>/extras/*.js'],
+				dest: '<%= meta.path.tempPath %>extras.js'
 			}
 		},
 		
@@ -182,7 +190,8 @@ module.exports = function(grunt) {
 				},
 				src: [
 					'<%= meta.path.tempPath %>vendor.js',
-					'<%= meta.path.tempPath %>app.js'
+					'<%= meta.path.tempPath %>app.js',
+					'<%= meta.path.tempPath %>extras.js'
 				],
 				dest: '<%= meta.path.distPath %>js/<%= pkg.name %>.js'
 			}

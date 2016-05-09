@@ -269,7 +269,7 @@ Video3d.prototype = {
 module.exports = Video3d;
 global.video3d = Video3d;
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./html":3,"./player":8,"./variables":15}],7:[function(require,module,exports){
+},{"./html":3,"./player":8,"./variables":14}],7:[function(require,module,exports){
 /* global window, document */
 "use strict";
 require('./requestFullScreen');
@@ -633,7 +633,7 @@ Control.prototype = {
 
 
 module.exports = Control;
-},{"../html":3,"../util/date":14,"./requestFullScreen":11}],8:[function(require,module,exports){
+},{"../html":3,"../util/date":13,"./requestFullScreen":11}],8:[function(require,module,exports){
 /**
 * player
 */
@@ -682,7 +682,7 @@ module.exports = Player;
 "use strict";
 require('./requestAnimFrame');
 var html = require('../html');
-//var THREE = require('three');
+var createjs = require('tween').createjs;
 
 var dom = html.dom;
 
@@ -781,10 +781,14 @@ Renderer.prototype.init = function(options){
 	var useTouch = options.useTouch!==undefined?options.useTouch:true;
 	var useDeviceMotion = options.useDeviceMotion!==undefined?options.useDeviceMotion:false;
 	
+	var finger = {};   //for touch one
+	
 	var container = dom.createElement({
 		className: namespace+meta.className.container
 	});
 	outContainer.appendChild(container);
+	
+	var defaultFov = 75;
 	
 	var scene;
 	var camera, renderer;
@@ -806,8 +810,8 @@ Renderer.prototype.init = function(options){
 	updateSize();
 	
 	scene = new THREE.Scene();
-	var geometry = new THREE.SphereGeometry( 500, 60, 40 );
-	geometry.scale( - 1, 1, 1 );
+	var geometry = new THREE.SphereGeometry( 500, 32, 15 ); //  500, 60, 40
+	geometry.scale( -1, 1, 1 );
 	
 	var material = new THREE.MeshBasicMaterial( { overdraw: 0.5, side:THREE.DoubleSide } );
 	var mesh = new THREE.Mesh( geometry, material );
@@ -825,7 +829,7 @@ Renderer.prototype.init = function(options){
 	//document.body.appendChild( renderer.domElement );
 	
 	//
-	camera = new THREE.PerspectiveCamera( 75, canvasWidth / canvasHeight, 1, 2000 );
+	camera = new THREE.PerspectiveCamera( defaultFov, canvasWidth / canvasHeight, 1, 10000 );
 	
 	//
 	canvas.addEventListener( 'mousedown', onDocumentMouseDown, false );
@@ -833,6 +837,9 @@ Renderer.prototype.init = function(options){
 	canvas.addEventListener( 'mouseup', onDocumentMouseUp, false );
 	canvas.addEventListener( 'touchstart', onDocumentTouchStart, false );
 	canvas.addEventListener( 'touchmove', onDocumentTouchMove, false );
+	canvas.addEventListener( 'touchend', onDocumentTouchEnd, false );
+	canvas.addEventListener( 'mousewheel', onDocumentMouseWheel, false );
+	canvas.addEventListener( 'MozMousePixelScroll', onDocumentMouseWheel, false);
 	window.addEventListener( "onorientationchange" in window ? "orientationchange" : "resize", onWindowResize, false ); 
 	if (window.DeviceMotionEvent){  
 		window.addEventListener("devicemotion", motionHandler, false);  
@@ -844,7 +851,8 @@ Renderer.prototype.init = function(options){
 	
 	var g = {
 		renderer: renderer,
-		camera: camera
+		camera: camera,
+		mesh: mesh
 	};
 	
 	for(var i in g){
@@ -860,6 +868,9 @@ Renderer.prototype.init = function(options){
 	self.useTouch = useTouch;
 	self.useDeviceMotion = useDeviceMotion;
 	self.material = material;
+	
+	self.swipeAnimCoefX = 4;
+	self.swipeAnimCoefY = 2;
 	
 	self.getCoordinates = function(){
 		return {lon:lon, lat:lat};
@@ -951,33 +962,167 @@ Renderer.prototype.init = function(options){
 		isUserInteracting = false;
 	}
 	
+	var touchesLength;
+	var touchesStart = [];
+	var swipeTween;
 	function onDocumentTouchStart( event ) {
 		if ( !self.useTouch )return;
+		touchesLength = event.touches.length;
 		if ( event.touches.length === 1 ) {
-			event.preventDefault();
+			//event.preventDefault();
 
 			onPointerDownPointerX = event.touches[ 0 ].pageX;
 			onPointerDownPointerY = event.touches[ 0 ].pageY;
 
 			onPointerDownLon = lon;
 			onPointerDownLat = lat;
+			
+			//intersect
+			var clientX = event.touches[0].pageX;
+			var clientY = event.touches[0].pageY;
+			mouse.x = (clientX - canvas.offsetLeft)/canvas.offsetWidth * 2 - 1;
+			mouse.y = (clientY - canvas.offsetTop)/canvas.offsetHeight * 2 - 1;
+		}else{
+			touchesStart = [];
+			for( var i = 0; i<event.touches.length; i++){
+				touchesStart.push(new THREE.Vector2(
+					event.touches[i].pageX,
+					event.touches[i].pageY
+				));
+			}
 		}
-		//intersect
-		var clientX = event.touches[0].pageX;
-		var clientY = event.touches[0].pageY;
-		mouse.x = (clientX - canvas.offsetLeft)/canvas.offsetWidth * 2 - 1;
-		mouse.y = (clientY - canvas.offsetTop)/canvas.offsetHeight * 2 - 1;
 	}
 
 	function onDocumentTouchMove( event ) {
+		event.preventDefault();
 		if ( !self.useTouch )return;
 		if ( event.touches.length === 1 ) {
-			event.preventDefault();
-
-			lon = - ( onPointerDownPointerX - event.touches[0].pageX ) * 0.1 + onPointerDownLon;
-			lat = - ( event.touches[0].pageY - onPointerDownPointerY ) * 0.1 + onPointerDownLat;
+			var deltaLon = - ( onPointerDownPointerX - event.touches[0].pageX ) * 0.1;
+			var deltaLat = - ( event.touches[0].pageY - onPointerDownPointerY ) * 0.1;
+			
+			finger.lastLon = lon;
+			finger.lastLat = lat;
+			
+			
+			lon = deltaLon + onPointerDownLon;
+			lat = deltaLat + onPointerDownLat;
+			setLonLat(lon, lat);
+			
+			finger.deltaLon = deltaLon;
+			finger.deltaLat = deltaLat;
+			
+			finger.lon = lon;
+			finger.lat = lat;
+		}else if( event.touches.length === touchesStart.length){
+			var delta = 0;
+			var distanceStart = 0, distanceMove = 0;
+			for( var i = 0; i<event.touches.length; i++){
+				var currentTouch = new THREE.Vector2(
+					event.touches[i].pageX,
+					event.touches[i].pageY
+				);
+				
+				distanceStart += touchesStart[i].length();
+				distanceMove += currentTouch.length();
+			}
+			delta = distanceMove - distanceStart;
+			setScale(delta);
 		}
 	}
+	
+	function onDocumentTouchEnd(){
+		if ( !self.useTouch )return;
+		//if ( event.changedTouches.length === 1 ) {
+		if ( touchesLength === 1 ) {
+			
+			//var x = lon + (finger.lon-finger.lastLon) * 1;
+			//var y = lat + (finger.lat-finger.lastLat) * 1;
+			
+			var x1 = lon, x2 = finger.lastLon;
+			if(x1>90&&x2<-90){
+				x2 += 360;
+			}else if(x1<-90&&x2>90){
+				x1 += 360;
+			}
+			
+			//var deltaX = x1 - x2;
+			//var deltaY = lat - finger.lastLat;
+			var deltaX = finger.deltaLon;
+			var deltaY = finger.deltaLat;
+			
+			var x = lon + deltaX * self.swipeAnimCoefX;
+			var y = lat + deltaY * self.swipeAnimCoefY;
+			
+			
+			swipeTween = createjs.Tween.get(finger, {override: true})
+				.to({ lon: x, lat: y }, 500, createjs.Ease.quadOut)
+				.addEventListener("change", function(e){
+					//console.log(e);
+					lon = e.target.target.lon;
+					lat = e.target.target.lat;
+					setLonLat(lon, lat);
+				});
+			
+			finger.deltaLon = finger.deltaLat = 0;
+			
+			return createjs;
+		}
+	}
+	
+	function setLonLat(pLon, pLat){
+		pLon = pLon||0;
+		pLat = pLat||0;
+		lon = ( pLon % 360 + 360 + 180 ) % 360 - 180;
+		lat = Math.max( - 85, Math.min( 85, pLat ) );
+		
+		//var tLat = 90 - pLat;
+		//tLat = ( tLat % 360 + 360 ) % 360 ;
+		//if(tLat >= 0 && tLat < 180){
+		//	lat = 90 - tLat;
+		//}else{
+		//	lat = tLat - 270;
+		//	//lon = -lon;
+		//}
+		
+	}
+	
+	function onDocumentMouseWheel(event){
+		var delta = 1;
+		if ( event.wheelDeltaY ) { // WebKit
+			delta = event.wheelDeltaY;
+		} else if ( event.wheelDelta ) { // Opera / Explorer 9
+			delta = event.wheelDelta;
+		} else if ( event.detail ) { // Firefox
+			delta = event.detail;
+		}
+		setScale(delta);
+		//setCameraFov(delta);
+	}
+	
+	function setScale(delta){
+		var scale = self.scale||1;
+		var maxY = 100;
+		if(delta>0){
+			delta = delta/maxY + 1;
+		}else{
+			delta = maxY / (-delta + maxY);
+		}
+		var newScale = scale*delta;
+		newScale = Math.max(1, Math.min(newScale, 15));
+		delta = newScale / scale;
+		geometry.scale(delta, delta, delta);
+		self.scale = newScale;
+	}
+	
+	//function setCameraFov(delta){
+	//	var coefficient = 0.1; //0.05
+	//	var fov = camera.fov;
+	//	
+	//	fov -= delta * coefficient;
+	//	fov = Math.max(defaultFov, Math.min(fov, 1000));
+	//	camera.fov = fov;
+	//	camera.updateProjectionMatrix();  //camera.fov
+	//}
 
 	function onWindowResize() {
 		updateSize();
@@ -1065,7 +1210,7 @@ Renderer.prototype.init = function(options){
 				//lon += 0.1;
 			}
 			
-			lat = Math.max( - 85, Math.min( 85, lat ) );
+			//lat = Math.max( - 85, Math.min( 85, lat ) );
 			phi = THREE.Math.degToRad( lat );
 			theta = THREE.Math.degToRad( lon );
 			
@@ -1083,7 +1228,7 @@ Renderer.prototype.init = function(options){
 
 
 module.exports = Renderer;
-},{"../html":3,"./requestAnimFrame":10}],10:[function(require,module,exports){
+},{"../html":3,"./requestAnimFrame":10,"tween":"tween"}],10:[function(require,module,exports){
 /* global window */
 "use strict";
 function initRequestAnimationFrame(){
@@ -1155,7 +1300,7 @@ initRequestFullScreen();
 },{}],12:[function(require,module,exports){
 
 "use strict";
-var browser = require('../util/browser');
+//var browser = require('../util/browser');
 var html = require('../html');
 
 var dom = html.dom;
@@ -1169,7 +1314,8 @@ var meta = {
 };
 
 function isSupport(){
-	return (browser.versions.ios&&(browser.versions.weixin||browser.versions.vendor.indexOf('Google')>-1))||browser.versions.windows;//||browser.versions.chrome;
+	//return (browser.versions.ios&&(browser.versions.weixin||browser.versions.vendor.indexOf('Google')>-1))||browser.versions.windows;//||browser.versions.chrome;
+	return true;
 }
 
 function createMessage(options){
@@ -1191,44 +1337,7 @@ module.exports = {
 	isSupport: isSupport,
 	createMessage: createMessage
 };
-},{"../html":3,"../util/browser":13}],13:[function(require,module,exports){
-/* global window */
-"use strict";
-
-/**
-* check browser
-*/
-var navigator = window.navigator;
-var browser={
-    versions: (function(){
-        var u = navigator.userAgent, app = navigator.appVersion;
-		var vendor = navigator.vendor;
-        return {
-        	u: u,
-        	app: app,
-			vendor: vendor,
-            windows: u.indexOf('Windows') > -1, //windows
-            trident: u.indexOf('Trident') > -1, //IE内核
-            presto: u.indexOf('Presto') > -1, //opera内核
-            webKit: u.indexOf('AppleWebKit') > -1, //苹果、谷歌内核
-            gecko: u.indexOf('Gecko') > -1 && u.indexOf('KHTML') === -1,//火狐内核
-            chrome: u.indexOf('Chrome') > -1 ,//chrome内核
-            mobile: !!u.match(/AppleWebKit.*Mobile.*/), //是否为移动终端
-            ios: !!u.match(/\(i[^;]+;( U;)? CPU.+Mac OS X/), //ios终端
-            android: u.indexOf('Android') > -1 || u.indexOf('Linux') > -1, //android终端或者uc浏览器
-            iPhone: u.indexOf('iPhone') > -1 , //是否为iPhone或者QQHD浏览器
-            iPad: u.indexOf('iPad') > -1, //是否iPad
-            webApp: u.indexOf('Safari') === -1, //是否web应该程序，没有头部与底部
-            weixin: u.indexOf('MicroMessenger') > -1, //是否微信 （2015-01-22新增）
-            weibo: u.indexOf('Weibo') > -1, //是否微博
-            qq: u.match(/\sQQ/i) === " qq" //是否QQ
-        };
-    })(),
-    language:(navigator.browserLanguage || navigator.language).toLowerCase(),
-};
-
-module.exports = browser;
-},{}],14:[function(require,module,exports){
+},{"../html":3}],13:[function(require,module,exports){
 
 /**
  * 
@@ -1631,10 +1740,10 @@ var getDateHelper = function(){
 };
 
 module.exports = getDateHelper();
-},{}],15:[function(require,module,exports){
+},{}],14:[function(require,module,exports){
 
 "use strict";
 module.exports = {
 	namespace: 'video3d-'
 };
-},{}]},{},[6,15]);
+},{}]},{},[6,14]);

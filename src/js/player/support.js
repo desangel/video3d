@@ -1,6 +1,6 @@
 
 "use strict";
-var browser = require('../util/browser');
+//var browser = require('../util/browser');
 var html = require('../html');
 
 var dom = html.dom;
@@ -14,7 +14,8 @@ var meta = {
 };
 
 function isSupport(){
-	return (browser.versions.ios&&(browser.versions.weixin||browser.versions.vendor.indexOf('Google')>-1))||browser.versions.windows;//||browser.versions.chrome;
+	//return (browser.versions.ios&&(browser.versions.weixin||browser.versions.vendor.indexOf('Google')>-1))||browser.versions.windows;//||browser.versions.chrome;
+	return true;
 }
 
 function createMessage(options){
