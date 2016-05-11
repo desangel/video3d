@@ -1,10 +1,15 @@
 /* global window, document */
 "use strict";
 require('./requestFullScreen');
+var variables = require('../variables');
 var html = require('../html');
-var dateHelper = require('../util/date');
+var util = require('../util');
 var dom = html.dom;
 var buttonDom = html.button;
+
+var namespace = variables.namespace;
+var displayHidden = variables.displayHidden;
+var dateHelper = util.date;
 
 var name = 'control-';
 var meta = {
@@ -18,13 +23,25 @@ var meta = {
 		scrollBg2: name+'scroll-bg2',
 		btnPlay: name+'btn-play',
 		btnVolume: name+'btn-volume',
-		btnDrag: name+'btn-drag',
+		btnSwipe: name+'btn-swipe',
 		btnFullScreen: name+'btn-fullscreen',
 		txtTime: name+'txt-time'
 	},
 	error: {
 		'notSupportFullScreen': { msg: '您的浏览器不支持全屏!' }
 	}
+};
+
+var defaultControlOptions = {
+	autoplay: false,
+	loop: false,
+	scroll: true,
+	btnPlay: true,
+	btnVolume: true,
+	btnSwipe: true,
+	btnFullScreen: true,
+	txtTime: true,
+	dragFile: true
 };
 
 function Control(options){
@@ -34,12 +51,13 @@ Control.prototype = {
 	constructor: Control,
 	init: function(options){
 		var self = this;
-		var namespace = options.namespace;
 		var container = options.container;
 		var video = options.video;
 		var renderer = options.renderer;
-		var autoplay = options.autoplay;
-		var loop = options.loop;
+		var controlOptions = util.extend({}, defaultControlOptions, options.control);
+		var autoplay = controlOptions.autoplay;
+		var loop = controlOptions.loop;
+		var dragFile = controlOptions.dragFile;
 		
 		video.setAttribute('webkit-playsinline','');  //行内播放
 		video.setAttribute('preload','');  //行内播放
@@ -47,8 +65,13 @@ Control.prototype = {
 		renderer.keyframe = function(){
 			self.keyframe();
 		};
+		if(dragFile){
+			var canvas = renderer.renderer.domElement;
+			canvas.addEventListener( 'dragover', handleDragFile, false );
+			canvas.addEventListener( 'drop', handleDropFile, false );
+		}
 		
-		var controlContainer = dom.createElement({ className: namespace+meta.className.container});
+		var controlContainer = dom.createElement({ className: namespace+meta.className.container });
 		var scroll = dom.createElement({ className: namespace+meta.className.scroll });
 		var scrollTouch = dom.createElement({ className: namespace+meta.className.scrollTouch });
 		var scrollPointer = dom.createElement({ className: namespace+meta.className.scrollPointer });
@@ -57,9 +80,26 @@ Control.prototype = {
 		var scrollBg2 = dom.createElement({ className: namespace+meta.className.scrollBg2 });
 		var btnPlay = buttonDom.createElement({ className: namespace+meta.className.btnPlay });
 		var btnVolume = buttonDom.createElement({ className: namespace+meta.className.btnVolume });
-		var btnDrag = buttonDom.createElement({ className: namespace+meta.className.btnDrag });
+		var btnSwipe = buttonDom.createElement({ className: namespace+meta.className.btnSwipe });
 		var btnFullScreen = buttonDom.createElement({ className: namespace+meta.className.btnFullScreen });
 		var txtTime = dom.createElement({ className: namespace+meta.className.txtTime });
+		
+		var controlComponents = {
+			scroll: scroll,
+			btnPlay: btnPlay,
+			btnVolume: btnVolume,
+			btnSwipe: btnSwipe,
+			btnFullScreen: btnFullScreen,
+			txtTime: txtTime
+		};
+		for(var i in controlComponents){
+			var component = controlComponents[i];
+			var componentOption = controlOptions[i];
+			if(!componentOption){
+				component.classList.add(displayHidden);
+			}
+		}
+		
 		scroll.appendChild(scrollTouch);
 		scroll.appendChild(scrollPointer);
 		scroll.appendChild(scrollBg);
@@ -69,7 +109,7 @@ Control.prototype = {
 		controlContainer.appendChild(btnPlay);
 		controlContainer.appendChild(txtTime);
 		controlContainer.appendChild(btnFullScreen);
-		controlContainer.appendChild(btnDrag);
+		controlContainer.appendChild(btnSwipe);
 		controlContainer.appendChild(btnVolume);
 		
 		container.appendChild(controlContainer);
@@ -83,7 +123,7 @@ Control.prototype = {
 		self.scrollBg2 = scrollBg2;
 		self.btnPlay = btnPlay;
 		self.btnVolume = btnVolume;
-		self.btnDrag = btnDrag;
+		self.btnSwipe = btnSwipe;
 		self.btnFullScreen = btnFullScreen;
 		self.txtTime = txtTime;
 		
@@ -172,7 +212,7 @@ Control.prototype = {
 		
 		btnPlay.addEventListener('click', handleBtnPlay);
 		btnVolume.addEventListener('click', handleBtnVolume);
-		btnDrag.addEventListener('click', handleBtnDrag);
+		btnSwipe.addEventListener('click', handleBtnSwipe);
 		btnFullScreen.addEventListener('click', handleBtnFullScreen);
 		
 		
@@ -185,8 +225,8 @@ Control.prototype = {
 			self.toggleVolume();
 		}
 		
-		function handleBtnDrag(){
-			self.toggleDrag();
+		function handleBtnSwipe(){
+			self.toggleSwipe();
 		}
 		
 		function handleBtnFullScreen(){
@@ -196,6 +236,27 @@ Control.prototype = {
 			}else{
 				self.requestFullScreen();
 			}
+		}
+		
+		function handleDragFile(e){
+			e.stopPropagation();
+			e.preventDefault();
+			e.dataTransfer.dropEffect = 'copy';
+		}
+		
+		function handleDropFile(e){
+			e.stopPropagation();
+			e.preventDefault();
+			var files = e.dataTransfer.files;
+			var file = files[0];
+			var src = window.URL.createObjectURL(file);
+			loadVideo(src);
+		}
+		
+		function loadVideo(src){
+			self.stop();
+			video.src = src;
+			video.load();
 		}
 	},
 	load: function(){
@@ -315,10 +376,10 @@ Control.prototype = {
 		}
 		video.volume = volume;
 	},
-	toggleDrag: function(){
+	toggleSwipe: function(){
 		var self = this;
-		var target = self.btnDrag;
-		var type = target.getAttribute('drag_type');
+		var target = self.btnSwipe;
+		var type = target.getAttribute('swipe_type');
 		if(type==='motion'){
 			self.useTouch();
 		}else if(window.DeviceMotionEvent){
@@ -327,20 +388,20 @@ Control.prototype = {
 	},
 	useTouch: function(){
 		var self = this;
-		var target = self.btnDrag;
+		var target = self.btnSwipe;
 		var renderer = self.renderer;
 		renderer.useTouch = true;
 		renderer.useDeviceMotion = false;
-		target.setAttribute('drag_type', 'touch');
+		target.setAttribute('swipe_type', 'touch');
 	},
 	useDeviceMotion: function(){
 		if(window.DeviceOrientationEvent){
 			var self = this;
-			var target = self.btnDrag;
+			var target = self.btnSwipe;
 			var renderer = self.renderer;
 			renderer.useTouch = false;
 			renderer.useDeviceMotion = true;
-			target.setAttribute('drag_type', 'motion');
+			target.setAttribute('swipe_type', 'motion');
 		}
 	},
 	requestFullScreen: function(){

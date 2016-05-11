@@ -14,6 +14,10 @@ $control-btn-border-left: 1px solid #3A3A3A;
 $control-btn-border-right: 1px solid #3A3A3A;
 $control-btn-background-size: 32px 32px;
 
+.#{$namespace}-hidden {
+	display:none;
+}
+
 .#{$namespace}-container *{ 
 	margin:0;
 	padding:0;
@@ -92,7 +96,7 @@ $control-btn-background-size: 32px 32px;
 // control-bar
 .#{$namespace}-control-btn-play,
 .#{$namespace}-control-btn-volume,
-.#{$namespace}-control-btn-drag,
+.#{$namespace}-control-btn-swipe,
 .#{$namespace}-control-btn-fullscreen{
 	@include btn();
 	@include btnImage();
@@ -117,14 +121,14 @@ $control-btn-background-size: 32px 32px;
 		background-image: imageUrl(btnVolume($i)); 
 	}
 }
-.#{$namespace}-control-btn-drag{
+.#{$namespace}-control-btn-swipe{
 	float: right; 
 	border-left: $control-btn-border-left;
-	&[drag_type="touch"]{
-		background-image: imageUrl($image-btn-drag-touch);
+	&[swipe_type="touch"]{
+		background-image: imageUrl($image-btn-swipe-touch);
 	}
-	&[drag_type="motion"]{
-		background-image: imageUrl($image-btn-drag-motion);
+	&[swipe_type="motion"]{
+		background-image: imageUrl($image-btn-swipe-motion);
 	}
 }
 .#{$namespace}-control-btn-fullscreen{ 

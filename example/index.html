@@ -91,7 +91,10 @@ body { position: absolute; top:0; bottom:0; left:0; width:100%; }
 				container: document.getElementById('playerContainer'),
 				videoSources: [
 					{ type:'video/mp4', src: '../assets/video/960p.mp4' }
-				]
+				],
+				control: {
+					//btnVolume: false
+				}
 			});
 			
 			setInterval(function(){

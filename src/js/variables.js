@@ -1,5 +1,9 @@
 
 "use strict";
+var namespace = 'video3d-';
+var displayHidden = namespace+'hidden';
+
 module.exports = {
-	namespace: 'video3d-'
+	namespace: namespace,
+	displayHidden: displayHidden
 };

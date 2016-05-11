@@ -3626,8 +3626,7 @@ Video3d.prototype = {
 		var self = this;
 		options = options||{};
 		var container = options.container;
-		var autoplay = options.autoplay||false;
-		var loop = options.loop||false;
+		var control = options.control||{};
 		var videoSources = options.videoSources;
 		var callbacks = options.callbacks||{};
 		//var fullScreenMode = options.fullScreenMode||false; //全屏模式
@@ -3649,11 +3648,9 @@ Video3d.prototype = {
 		
 		//player
 		var player = new Player({
-			namespace: namespace,
 			container: container,
 			video: video,
-			autoplay: autoplay,
-			loop: loop,
+			control: control
 		});
 		
 		self.container = container;
@@ -3681,14 +3678,19 @@ Video3d.prototype = {
 module.exports = Video3d;
 global.video3d = Video3d;
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./html":3,"./player":8,"./variables":14}],7:[function(require,module,exports){
+},{"./html":3,"./player":8,"./variables":22}],7:[function(require,module,exports){
 /* global window, document */
 "use strict";
 require('./requestFullScreen');
+var variables = require('../variables');
 var html = require('../html');
-var dateHelper = require('../util/date');
+var util = require('../util');
 var dom = html.dom;
 var buttonDom = html.button;
+
+var namespace = variables.namespace;
+var displayHidden = variables.displayHidden;
+var dateHelper = util.date;
 
 var name = 'control-';
 var meta = {
@@ -3702,13 +3704,25 @@ var meta = {
 		scrollBg2: name+'scroll-bg2',
 		btnPlay: name+'btn-play',
 		btnVolume: name+'btn-volume',
-		btnDrag: name+'btn-drag',
+		btnSwipe: name+'btn-swipe',
 		btnFullScreen: name+'btn-fullscreen',
 		txtTime: name+'txt-time'
 	},
 	error: {
 		'notSupportFullScreen': { msg: '您的浏览器不支持全屏!' }
 	}
+};
+
+var defaultControlOptions = {
+	autoplay: false,
+	loop: false,
+	scroll: true,
+	btnPlay: true,
+	btnVolume: true,
+	btnSwipe: true,
+	btnFullScreen: true,
+	txtTime: true,
+	dragFile: true
 };
 
 function Control(options){
@@ -3718,12 +3732,13 @@ Control.prototype = {
 	constructor: Control,
 	init: function(options){
 		var self = this;
-		var namespace = options.namespace;
 		var container = options.container;
 		var video = options.video;
 		var renderer = options.renderer;
-		var autoplay = options.autoplay;
-		var loop = options.loop;
+		var controlOptions = util.extend({}, defaultControlOptions, options.control);
+		var autoplay = controlOptions.autoplay;
+		var loop = controlOptions.loop;
+		var dragFile = controlOptions.dragFile;
 		
 		video.setAttribute('webkit-playsinline','');  //行内播放
 		video.setAttribute('preload','');  //行内播放
@@ -3731,8 +3746,13 @@ Control.prototype = {
 		renderer.keyframe = function(){
 			self.keyframe();
 		};
+		if(dragFile){
+			var canvas = renderer.renderer.domElement;
+			canvas.addEventListener( 'dragover', handleDragFile, false );
+			canvas.addEventListener( 'drop', handleDropFile, false );
+		}
 		
-		var controlContainer = dom.createElement({ className: namespace+meta.className.container});
+		var controlContainer = dom.createElement({ className: namespace+meta.className.container });
 		var scroll = dom.createElement({ className: namespace+meta.className.scroll });
 		var scrollTouch = dom.createElement({ className: namespace+meta.className.scrollTouch });
 		var scrollPointer = dom.createElement({ className: namespace+meta.className.scrollPointer });
@@ -3741,9 +3761,26 @@ Control.prototype = {
 		var scrollBg2 = dom.createElement({ className: namespace+meta.className.scrollBg2 });
 		var btnPlay = buttonDom.createElement({ className: namespace+meta.className.btnPlay });
 		var btnVolume = buttonDom.createElement({ className: namespace+meta.className.btnVolume });
-		var btnDrag = buttonDom.createElement({ className: namespace+meta.className.btnDrag });
+		var btnSwipe = buttonDom.createElement({ className: namespace+meta.className.btnSwipe });
 		var btnFullScreen = buttonDom.createElement({ className: namespace+meta.className.btnFullScreen });
 		var txtTime = dom.createElement({ className: namespace+meta.className.txtTime });
+		
+		var controlComponents = {
+			scroll: scroll,
+			btnPlay: btnPlay,
+			btnVolume: btnVolume,
+			btnSwipe: btnSwipe,
+			btnFullScreen: btnFullScreen,
+			txtTime: txtTime
+		};
+		for(var i in controlComponents){
+			var component = controlComponents[i];
+			var componentOption = controlOptions[i];
+			if(!componentOption){
+				component.classList.add(displayHidden);
+			}
+		}
+		
 		scroll.appendChild(scrollTouch);
 		scroll.appendChild(scrollPointer);
 		scroll.appendChild(scrollBg);
@@ -3753,7 +3790,7 @@ Control.prototype = {
 		controlContainer.appendChild(btnPlay);
 		controlContainer.appendChild(txtTime);
 		controlContainer.appendChild(btnFullScreen);
-		controlContainer.appendChild(btnDrag);
+		controlContainer.appendChild(btnSwipe);
 		controlContainer.appendChild(btnVolume);
 		
 		container.appendChild(controlContainer);
@@ -3767,7 +3804,7 @@ Control.prototype = {
 		self.scrollBg2 = scrollBg2;
 		self.btnPlay = btnPlay;
 		self.btnVolume = btnVolume;
-		self.btnDrag = btnDrag;
+		self.btnSwipe = btnSwipe;
 		self.btnFullScreen = btnFullScreen;
 		self.txtTime = txtTime;
 		
@@ -3856,7 +3893,7 @@ Control.prototype = {
 		
 		btnPlay.addEventListener('click', handleBtnPlay);
 		btnVolume.addEventListener('click', handleBtnVolume);
-		btnDrag.addEventListener('click', handleBtnDrag);
+		btnSwipe.addEventListener('click', handleBtnSwipe);
 		btnFullScreen.addEventListener('click', handleBtnFullScreen);
 		
 		
@@ -3869,8 +3906,8 @@ Control.prototype = {
 			self.toggleVolume();
 		}
 		
-		function handleBtnDrag(){
-			self.toggleDrag();
+		function handleBtnSwipe(){
+			self.toggleSwipe();
 		}
 		
 		function handleBtnFullScreen(){
@@ -3880,6 +3917,27 @@ Control.prototype = {
 			}else{
 				self.requestFullScreen();
 			}
+		}
+		
+		function handleDragFile(e){
+			e.stopPropagation();
+			e.preventDefault();
+			e.dataTransfer.dropEffect = 'copy';
+		}
+		
+		function handleDropFile(e){
+			e.stopPropagation();
+			e.preventDefault();
+			var files = e.dataTransfer.files;
+			var file = files[0];
+			var src = window.URL.createObjectURL(file);
+			loadVideo(src);
+		}
+		
+		function loadVideo(src){
+			self.stop();
+			video.src = src;
+			video.load();
 		}
 	},
 	load: function(){
@@ -3999,10 +4057,10 @@ Control.prototype = {
 		}
 		video.volume = volume;
 	},
-	toggleDrag: function(){
+	toggleSwipe: function(){
 		var self = this;
-		var target = self.btnDrag;
-		var type = target.getAttribute('drag_type');
+		var target = self.btnSwipe;
+		var type = target.getAttribute('swipe_type');
 		if(type==='motion'){
 			self.useTouch();
 		}else if(window.DeviceMotionEvent){
@@ -4011,20 +4069,20 @@ Control.prototype = {
 	},
 	useTouch: function(){
 		var self = this;
-		var target = self.btnDrag;
+		var target = self.btnSwipe;
 		var renderer = self.renderer;
 		renderer.useTouch = true;
 		renderer.useDeviceMotion = false;
-		target.setAttribute('drag_type', 'touch');
+		target.setAttribute('swipe_type', 'touch');
 	},
 	useDeviceMotion: function(){
 		if(window.DeviceOrientationEvent){
 			var self = this;
-			var target = self.btnDrag;
+			var target = self.btnSwipe;
 			var renderer = self.renderer;
 			renderer.useTouch = false;
 			renderer.useDeviceMotion = true;
-			target.setAttribute('drag_type', 'motion');
+			target.setAttribute('swipe_type', 'motion');
 		}
 	},
 	requestFullScreen: function(){
@@ -4045,7 +4103,7 @@ Control.prototype = {
 
 
 module.exports = Control;
-},{"../html":3,"../util/date":13,"./requestFullScreen":11}],8:[function(require,module,exports){
+},{"../html":3,"../util":19,"../variables":22,"./requestFullScreen":11}],8:[function(require,module,exports){
 /**
 * player
 */
@@ -4061,24 +4119,17 @@ Player.prototype = {
 	constructor: Player,
 	init: function(options){
 		var self = this;
-		var namespace = options.namespace;
 		var container = options.container;
-		var video = options.video;
 		
 		if(!Support.isSupport()){
 			Support.createMessage({
-				namespace: namespace,
 				container: container
 			});
 			return;
 		}
 		
 		var renderer = new Renderer();
-		renderer.init({
-			namespace: namespace,
-			container: container,
-			video: video
-		});
+		renderer.init(options);
 		
 		options.renderer = renderer;
 		var control = new Control(options);
@@ -4093,9 +4144,11 @@ module.exports = Player;
 /* global window, document, THREE */
 "use strict";
 require('./requestAnimFrame');
+var variables = require('../variables');
 var html = require('../html');
 var createjs = require('tween').createjs;
 
+var namespace = variables.namespace;
 var dom = html.dom;
 
 var name = 'renderer-';
@@ -4161,7 +4214,6 @@ Renderer.prototype.updateTexture = function(){
 Renderer.prototype.init = function(options){
 	var self = this;
 	options = options||{};
-	var namespace = options.namespace;
 	var outContainer = options.container||document.body;
 	var video = options.video;
 	var useTouch = options.useTouch!==undefined?options.useTouch:true;
@@ -4350,7 +4402,6 @@ Renderer.prototype.init = function(options){
 	
 	var touchesLength;
 	var touchesStart = [];
-	var swipeTween;
 	function onDocumentTouchStart( event ) {
 		if ( !self.useTouch )return;
 		touchesLength = event.touches.length;
@@ -4392,9 +4443,6 @@ Renderer.prototype.init = function(options){
 			
 			finger.deltaLon = deltaLon;
 			finger.deltaLat = deltaLat;
-			
-			finger.lon = lon;
-			finger.lat = lat;
 		}else if( event.touches.length === touchesStart.length){
 			var delta = 0;
 			var distanceStart = 0, distanceMove = 0;
@@ -4419,19 +4467,27 @@ Renderer.prototype.init = function(options){
 			var deltaX = finger.deltaLon;
 			var deltaY = finger.deltaLat;
 			
-			var x = lon + deltaX * self.swipeAnimCoefX;
-			var y = lat + deltaY * self.swipeAnimCoefY;
+			var x = deltaX * self.swipeAnimCoefX;
+			var y = deltaY * self.swipeAnimCoefY;
 			
-			
-			swipeTween = createjs.Tween.get(finger, {override: true})
+			var checkDeltaX = Math.abs(lon - onPointerDownLon);
+			var checkDeltaY = Math.abs(lat - onPointerDownLat);
+			//console.log(checkDeltaX+':'+checkDeltaY);
+			if(checkDeltaX<5&&checkDeltaY<2.5){
+				createjs.Tween.removeTweens(finger);
+			}else{
+				finger.lon = finger.lat = 0;
+				var originLon = lon;
+				var originLat = lat;
+				createjs.Tween.get(finger, {override: true})
 				.to({ lon: x, lat: y }, 500, createjs.Ease.quadOut)
 				.addEventListener("change", function(e){
 					//console.log(e);
-					lon = e.target.target.lon;
-					lat = e.target.target.lat;
+					lon = originLon + e.target.target.lon;
+					lat = originLat + e.target.target.lat;
 					setLonLat(lon, lat);
 				});
-			
+			}
 			finger.deltaLon = finger.deltaLat = 0;
 			
 			return createjs;
@@ -4597,7 +4653,7 @@ Renderer.prototype.init = function(options){
 
 
 module.exports = Renderer;
-},{"../html":3,"./requestAnimFrame":10,"tween":"tween"}],10:[function(require,module,exports){
+},{"../html":3,"../variables":22,"./requestAnimFrame":10,"tween":"tween"}],10:[function(require,module,exports){
 /* global window */
 "use strict";
 function initRequestAnimationFrame(){
@@ -4707,6 +4763,241 @@ module.exports = {
 	createMessage: createMessage
 };
 },{"../html":3}],13:[function(require,module,exports){
+/* global xyz */
+"use strict";
+//inheritance
+function classExtend(ChildClass, ParentClass){
+	var initializing = false, fnTest = /xyz/.test(function() { xyz; }) ? /\b_super\b/ : /.*/;
+	var _super = ParentClass.prototype;
+	var prop = ChildClass.prototype;
+	var prototype = typeof Object.create === "function" ? Object.create(ParentClass.prototype):new ParentClass();
+	for (var name in prop) {
+		// Check if we're overwriting an existing function
+		prototype[name] = typeof prop[name] === "function" &&
+			typeof _super[name] === "function" && fnTest.test(prop[name]) ?
+			createCallSuperFunction(name, prop[name]) : prop[name];
+	}
+	initializing = true;
+	ChildClass.prototype = prototype;
+	ChildClass.prototype.constructor = ChildClass;
+	
+	function createCallSuperFunction(name, fn){
+		return function() {
+			var tmp = this._super;
+		
+			// Add a new ._super() method that is the same method
+			// but on the super-class
+			this._super = _super[name];
+		
+			// The method only need to be bound temporarily, so we
+			// remove it when we're done executing
+			var ret = fn.apply(this, arguments);
+			this._super = tmp;
+		
+			return ret;
+		};
+	}
+}
+
+module.exports = classExtend;
+},{}],14:[function(require,module,exports){
+"use strict";
+function is(arr, element){
+	for(var i = 0; i<arr.length; i++){
+		if(typeof element === 'function'){
+			if(element(i, arr[i])){return true;}
+		}else{
+			if(arr[i]===element){return true;}
+		}
+	}
+	return false;
+}
+
+module.exports = {
+	is: is
+};
+},{}],15:[function(require,module,exports){
+/* global document, window  */
+"use strict";
+function addCookie(name, value, attr){
+	var str = "";
+	if(attr){
+		for(var prop in attr){
+			str+=";"+prop+"="+attr[prop];
+		}
+	}
+	document.cookie = name + "=" + window.escape(value) + str;
+}
+function deleteCookie(name){
+	var exp = new Date();
+	exp.setTime(exp.getTime() - 1);
+	var cval = getCookie(name);
+	if (cval != null){
+		document.cookie = name + "=" + cval + ";expires=" + exp.toGMTString();
+	}
+}
+function getCookie(name){
+	var arr = document.cookie.match(new RegExp("(^| )" + name + "=([^;]*)(;|$)"));
+	if (arr != null){
+		return (arr[2]);
+	}
+	return null;
+}
+function getDocumentCookie(){
+	return document.cookie;
+}
+
+module.exports = {
+	addCookie: addCookie,
+	deleteCookie: deleteCookie,
+	getCookie: getCookie,
+	getDocumentCookie: getDocumentCookie
+};
+},{}],16:[function(require,module,exports){
+/* //global document, window  */
+"use strict";
+
+var class2type = {};
+var toString = class2type.toString;
+var hasOwn = class2type.hasOwnProperty;
+
+function isFunction( obj ) {
+	return type(obj) === "function";
+}
+function isArray( obj ) {
+	return type(obj) === "array";
+}
+function isWindow( obj ) {
+	return obj != null && obj === obj.window;
+}
+function isNumeric( obj ) {
+	// parseFloat NaNs numeric-cast false positives (null|true|false|"")
+	// ...but misinterprets leading-number strings, particularly hex literals ("0x...")
+	// subtraction forces infinities to NaN
+	// adding 1 corrects loss of precision from parseFloat (#15100)
+	return !isArray( obj ) && (obj - parseFloat( obj ) + 1) >= 0;
+}
+function isEmptyObject( obj ) {
+	var name;
+	for ( name in obj ) {
+		return false;
+	}
+	return true;
+}
+function isPlainObject( obj ) {
+	var key;
+	// Must be an Object.
+	// Because of IE, we also have to check the presence of the constructor property.
+	// Make sure that DOM nodes and window objects don't pass through, as well
+	if ( !obj || type(obj) !== "object" || obj.nodeType || isWindow( obj ) ) {
+		return false;
+	}
+	try {
+		// Not own constructor property must be Object
+		if ( obj.constructor &&
+			!hasOwn.call(obj, "constructor") &&
+			!hasOwn.call(obj.constructor.prototype, "isPrototypeOf") ) {
+			return false;
+		}
+	} catch ( e ) {
+		// IE8,9 Will throw exceptions on certain host objects #9897
+		return false;
+	}
+	// Support: IE<9
+	// Handle iteration over inherited properties before own properties.
+	//if ( support.ownLast ) {
+	//	for ( key in obj ) {
+	//		return hasOwn.call( obj, key );
+	//	}
+	//}
+	// Own properties are enumerated firstly, so to speed up,
+	// if last one is own, then all properties are own.
+	for ( key in obj ) {}
+	return key === undefined || hasOwn.call( obj, key );
+}
+function type( obj ) {
+	if ( obj == null ) {
+		return obj + "";
+	}
+	return typeof obj === "object" || typeof obj === "function" ?
+		class2type[ toString.call(obj) ] || "object" :
+		typeof obj;
+}
+function extend(){
+	var src, copyIsArray, copy, name, options, clone,
+		target = arguments[0] || {},
+		i = 1,
+		length = arguments.length,
+		deep = false;
+		// Handle a deep copy situation
+	if ( typeof target === "boolean" ) {
+		deep = target;
+		// skip the boolean and the target
+		target = arguments[ i ] || {};
+		i++;
+	}
+	// Handle case when target is a string or something (possible in deep copy)
+	if ( typeof target !== "object" && !isFunction(target)) {
+		target = {};
+	}
+	// extend itself if only one argument is passed
+	if ( i === length ) {
+		target = {}; //this
+		i--;
+	}
+	for ( ; i < length; i++ ) {
+		// Only deal with non-null/undefined values
+		if ( (options = arguments[ i ]) != null ) {
+			// Extend the base object
+			for ( name in options ) {
+				src = target[ name ];
+				copy = options[ name ];
+				// do not copy prototype function
+				if ( !options.hasOwnProperty(name)){
+					continue;
+				}
+				// Prevent never-ending loop
+				if ( target === copy ) {
+					continue;
+				}
+				// Recurse if we're merging plain objects or arrays
+
+				if ( name!== 'parent' && deep && copy && !isPlainObject(copy) &&  typeof  copy.clone === "function" ){
+					//remove parent for no dead loop
+					//clone is for classType object
+					target[ name ] = copy.clone();
+					if(target[ name ] ===undefined){ target[ name ]  = copy; }
+				} else if ( deep && copy && ( isPlainObject(copy) || (copyIsArray = isArray(copy)) ) ) {
+					if ( copyIsArray ) {
+						copyIsArray = false;
+						clone = src && isArray(src) ? src : [];
+					} else {
+						clone = src && isPlainObject(src) ? src : {};
+					}
+					// Never move original objects, clone them
+					target[ name ] = extend( deep, clone, copy );
+				// Don't bring in undefined values
+				} else if ( copy !== undefined ) {
+					target[ name ] = copy;
+				}
+			}
+		}
+	}
+	// Return the modified object
+	return target;
+}
+
+module.exports = {
+	isFunction: isFunction,
+	isArray: Array.isArray || isArray,
+	isWindow: isWindow,
+	isNumeric: isNumeric,
+	isEmptyObject: isEmptyObject,
+	isPlainObject: isPlainObject,
+	type: type,
+	extend: extend
+};
+},{}],17:[function(require,module,exports){
 
 /**
  * 
@@ -5109,13 +5400,104 @@ var getDateHelper = function(){
 };
 
 module.exports = getDateHelper();
-},{}],14:[function(require,module,exports){
+},{}],18:[function(require,module,exports){
+/* global window */
+"use strict";
+
+if(!window){
+	return;
+}
+window.URL = window.URL||window.webkitURL;
+},{}],19:[function(require,module,exports){
 
 "use strict";
-module.exports = {
-	namespace: 'video3d-'
+require('./hack');
+var classExtend = require('./classExtend');
+var core = require('./core');
+var object = require('./object');
+
+var collection = require('./collection');
+var cookie = require('./cookie');
+var date = require('./date');
+var path = require('./path');
+
+var util = {
+	collection: collection,
+	cookie: cookie,
+	date: date,
+	path: path
 };
-},{}]},{},[6,14]);
+util = core.extend(true, util, core, classExtend, object);
+
+
+module.exports = util;
+},{"./classExtend":13,"./collection":14,"./cookie":15,"./core":16,"./date":17,"./hack":18,"./object":20,"./path":21}],20:[function(require,module,exports){
+"use strict";
+//ECMA SCRIPT 5
+function defineProperty(obj, name, prop){
+	if(typeof Object.defineProperty ==='function'){
+		Object.defineProperty(obj, name, prop);
+	}
+	else{
+		obj[name] = prop['value'];
+	}
+}
+
+function defineProperties(obj, props){
+	if(typeof Object.defineProperties ==='function'){
+		Object.defineProperties(obj, props);
+	}
+	else{
+		for(var i in props){
+			var prop = props[i];
+			obj[i] = prop['value'];
+		}
+	}
+}
+module.exports = {
+	defineProperty: defineProperty,
+	defineProperties: defineProperties
+};
+},{}],21:[function(require,module,exports){
+/* global document */
+"use strict";
+function findCurrentPath(){
+	return document.currentScript&&document.currentScript.src||(function(){
+		//for IE10+ Safari Opera9
+		var a = {}, stack;
+		try{
+			a.b();
+		}catch(e){
+			stack = e.stack || e.sourceURL || e.stacktrace;
+		}
+		var rExtractUri = /(?:http|https|file):\/\/.*?\/.+?.js/, 
+        absPath = rExtractUri.exec(stack);
+		return absPath[0] || '';
+	})()||(function(){
+		// IE5.5 - 9
+		var scripts = document.scripts;
+	    var isLt8 = ('' + document.querySelector).indexOf('[native code]') === -1;
+	    for (var i = scripts.length - 1, script; script = scripts[i--];){
+	       if (script.readyState === 'interative'){
+	          return isLt8 ? script.getAttribute('src', 4) : script.src;   
+	       }
+	    }
+	})();
+}
+module.exports = {
+	findCurrentPath: findCurrentPath
+};
+},{}],22:[function(require,module,exports){
+
+"use strict";
+var namespace = 'video3d-';
+var displayHidden = namespace+'hidden';
+
+module.exports = {
+	namespace: namespace,
+	displayHidden: displayHidden
+};
+},{}]},{},[6,22]);
 
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 /* global window, module, define */

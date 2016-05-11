@@ -4,6 +4,11 @@
  * =====================================================
  */
 
+.video3d-hidden
+{
+    display: none;
+}
+
 .video3d-container *
 {
     margin: 0;
@@ -114,7 +119,7 @@
 
 .video3d-control-btn-play,
 .video3d-control-btn-volume,
-.video3d-control-btn-drag,
+.video3d-control-btn-swipe,
 .video3d-control-btn-fullscreen
 {
     box-sizing: border-box;
@@ -148,8 +153,8 @@
 .video3d-control-btn-play:enabled:active, .video3d-control-btn-play.video3d-active:enabled,
 .video3d-control-btn-volume:enabled:active,
 .video3d-control-btn-volume.video3d-active:enabled,
-.video3d-control-btn-drag:enabled:active,
-.video3d-control-btn-drag.video3d-active:enabled,
+.video3d-control-btn-swipe:enabled:active,
+.video3d-control-btn-swipe.video3d-active:enabled,
 .video3d-control-btn-fullscreen:enabled:active,
 .video3d-control-btn-fullscreen.video3d-active:enabled
 {
@@ -196,17 +201,17 @@
     background-image: url('icons/volume3.png');
 }
 
-.video3d-control-btn-drag
+.video3d-control-btn-swipe
 {
     float: right;
 
     border-left: 1px solid #3a3a3a;
 }
-.video3d-control-btn-drag[drag_type='touch']
+.video3d-control-btn-swipe[swipe_type='touch']
 {
     background-image: url('icons/vdrag2.png');
 }
-.video3d-control-btn-drag[drag_type='motion']
+.video3d-control-btn-swipe[swipe_type='motion']
 {
     background-image: url('icons/vdrag1.png');
 }

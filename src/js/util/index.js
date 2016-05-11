@@ -1,5 +1,6 @@
 
 "use strict";
+require('./hack');
 var classExtend = require('./classExtend');
 var core = require('./core');
 var object = require('./object');

@@ -1,9 +1,11 @@
 /* global window, document, THREE */
 "use strict";
 require('./requestAnimFrame');
+var variables = require('../variables');
 var html = require('../html');
 var createjs = require('tween').createjs;
 
+var namespace = variables.namespace;
 var dom = html.dom;
 
 var name = 'renderer-';
@@ -69,7 +71,6 @@ Renderer.prototype.updateTexture = function(){
 Renderer.prototype.init = function(options){
 	var self = this;
 	options = options||{};
-	var namespace = options.namespace;
 	var outContainer = options.container||document.body;
 	var video = options.video;
 	var useTouch = options.useTouch!==undefined?options.useTouch:true;
@@ -258,7 +259,6 @@ Renderer.prototype.init = function(options){
 	
 	var touchesLength;
 	var touchesStart = [];
-	var swipeTween;
 	function onDocumentTouchStart( event ) {
 		if ( !self.useTouch )return;
 		touchesLength = event.touches.length;
@@ -300,9 +300,6 @@ Renderer.prototype.init = function(options){
 			
 			finger.deltaLon = deltaLon;
 			finger.deltaLat = deltaLat;
-			
-			finger.lon = lon;
-			finger.lat = lat;
 		}else if( event.touches.length === touchesStart.length){
 			var delta = 0;
 			var distanceStart = 0, distanceMove = 0;
@@ -327,19 +324,27 @@ Renderer.prototype.init = function(options){
 			var deltaX = finger.deltaLon;
 			var deltaY = finger.deltaLat;
 			
-			var x = lon + deltaX * self.swipeAnimCoefX;
-			var y = lat + deltaY * self.swipeAnimCoefY;
+			var x = deltaX * self.swipeAnimCoefX;
+			var y = deltaY * self.swipeAnimCoefY;
 			
-			
-			swipeTween = createjs.Tween.get(finger, {override: true})
+			var checkDeltaX = Math.abs(lon - onPointerDownLon);
+			var checkDeltaY = Math.abs(lat - onPointerDownLat);
+			//console.log(checkDeltaX+':'+checkDeltaY);
+			if(checkDeltaX<5&&checkDeltaY<2.5){
+				createjs.Tween.removeTweens(finger);
+			}else{
+				finger.lon = finger.lat = 0;
+				var originLon = lon;
+				var originLat = lat;
+				createjs.Tween.get(finger, {override: true})
 				.to({ lon: x, lat: y }, 500, createjs.Ease.quadOut)
 				.addEventListener("change", function(e){
 					//console.log(e);
-					lon = e.target.target.lon;
-					lat = e.target.target.lat;
+					lon = originLon + e.target.target.lon;
+					lat = originLat + e.target.target.lat;
 					setLonLat(lon, lat);
 				});
-			
+			}
 			finger.deltaLon = finger.deltaLat = 0;
 			
 			return createjs;

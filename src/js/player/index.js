@@ -13,24 +13,17 @@ Player.prototype = {
 	constructor: Player,
 	init: function(options){
 		var self = this;
-		var namespace = options.namespace;
 		var container = options.container;
-		var video = options.video;
 		
 		if(!Support.isSupport()){
 			Support.createMessage({
-				namespace: namespace,
 				container: container
 			});
 			return;
 		}
 		
 		var renderer = new Renderer();
-		renderer.init({
-			namespace: namespace,
-			container: container,
-			video: video
-		});
+		renderer.init(options);
 		
 		options.renderer = renderer;
 		var control = new Control(options);
