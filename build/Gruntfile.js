@@ -24,7 +24,7 @@ module.exports = function(grunt) {
 	var	srcHintOptions = readOptionalJSON( "../src/js/.jshintrc" );
 		
 	if ( !grunt.option( "filename" ) ) {
-		grunt.option( "filename", "../temp/index.js" );
+		grunt.option( "filename", "../temp/index.js" );  //build task output path
 	}
 	// Project configuration.
 	grunt.initConfig({
