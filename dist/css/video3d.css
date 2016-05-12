@@ -120,10 +120,11 @@
 .video3d-control-btn-play,
 .video3d-control-btn-volume,
 .video3d-control-btn-swipe,
+.video3d-control-btn-view,
 .video3d-control-btn-fullscreen
 {
     box-sizing: border-box;
-    width: 48px;
+    width: 40px;
     height: 100%;
 
     cursor: pointer;
@@ -155,6 +156,8 @@
 .video3d-control-btn-volume.video3d-active:enabled,
 .video3d-control-btn-swipe:enabled:active,
 .video3d-control-btn-swipe.video3d-active:enabled,
+.video3d-control-btn-view:enabled:active,
+.video3d-control-btn-view.video3d-active:enabled,
 .video3d-control-btn-fullscreen:enabled:active,
 .video3d-control-btn-fullscreen.video3d-active:enabled
 {
@@ -214,6 +217,21 @@
 .video3d-control-btn-swipe[swipe_type='motion']
 {
     background-image: url('icons/vdrag1.png');
+}
+
+.video3d-control-btn-view
+{
+    float: right;
+
+    border-left: 1px solid #3a3a3a;
+}
+.video3d-control-btn-view[view_type='fm']
+{
+    background-image: url('icons/viewport1.png');
+}
+.video3d-control-btn-view[view_type='vr']
+{
+    background-image: url('icons/viewport2.png');
 }
 
 .video3d-control-btn-fullscreen

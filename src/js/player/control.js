@@ -24,6 +24,7 @@ var meta = {
 		btnPlay: name+'btn-play',
 		btnVolume: name+'btn-volume',
 		btnSwipe: name+'btn-swipe',
+		btnView: name+'btn-view',
 		btnFullScreen: name+'btn-fullscreen',
 		txtTime: name+'txt-time'
 	},
@@ -39,6 +40,7 @@ var defaultControlOptions = {
 	btnPlay: true,
 	btnVolume: true,
 	btnSwipe: true,
+	btnView: true,
 	btnFullScreen: true,
 	txtTime: true,
 	dragFile: true
@@ -81,6 +83,7 @@ Control.prototype = {
 		var btnPlay = buttonDom.createElement({ className: namespace+meta.className.btnPlay });
 		var btnVolume = buttonDom.createElement({ className: namespace+meta.className.btnVolume });
 		var btnSwipe = buttonDom.createElement({ className: namespace+meta.className.btnSwipe });
+		var btnView = buttonDom.createElement({ className: namespace+meta.className.btnView });
 		var btnFullScreen = buttonDom.createElement({ className: namespace+meta.className.btnFullScreen });
 		var txtTime = dom.createElement({ className: namespace+meta.className.txtTime });
 		
@@ -89,6 +92,7 @@ Control.prototype = {
 			btnPlay: btnPlay,
 			btnVolume: btnVolume,
 			btnSwipe: btnSwipe,
+			btnView: btnView,
 			btnFullScreen: btnFullScreen,
 			txtTime: txtTime
 		};
@@ -109,6 +113,7 @@ Control.prototype = {
 		controlContainer.appendChild(btnPlay);
 		controlContainer.appendChild(txtTime);
 		controlContainer.appendChild(btnFullScreen);
+		controlContainer.appendChild(btnView);
 		controlContainer.appendChild(btnSwipe);
 		controlContainer.appendChild(btnVolume);
 		
@@ -124,6 +129,7 @@ Control.prototype = {
 		self.btnPlay = btnPlay;
 		self.btnVolume = btnVolume;
 		self.btnSwipe = btnSwipe;
+		self.btnView = btnView;
 		self.btnFullScreen = btnFullScreen;
 		self.txtTime = txtTime;
 		
@@ -139,6 +145,7 @@ Control.prototype = {
 		
 		self.renderVolume();
 		self.useTouch();
+		self.useFullMotion();
 		
 		//bind event
 		var isInit = false;
@@ -213,6 +220,7 @@ Control.prototype = {
 		btnPlay.addEventListener('click', handleBtnPlay);
 		btnVolume.addEventListener('click', handleBtnVolume);
 		btnSwipe.addEventListener('click', handleBtnSwipe);
+		btnView.addEventListener('click', handleBtnView);
 		btnFullScreen.addEventListener('click', handleBtnFullScreen);
 		
 		
@@ -227,6 +235,10 @@ Control.prototype = {
 		
 		function handleBtnSwipe(){
 			self.toggleSwipe();
+		}
+		
+		function handleBtnView(){
+			self.toggleView();
 		}
 		
 		function handleBtnFullScreen(){
@@ -403,6 +415,32 @@ Control.prototype = {
 			renderer.useDeviceMotion = true;
 			target.setAttribute('swipe_type', 'motion');
 		}
+	},
+	toggleView: function(){
+		var self = this;
+		var target = self.btnView;
+		var type = target.getAttribute('view_type');
+		if(type==='fm'){
+			self.useVirtualReality();
+		}else{
+			self.useFullMotion();
+		}
+	},
+	useFullMotion: function(){
+		var self = this;
+		var target = self.btnView;
+		var renderer = self.renderer;
+		renderer.useFullMotion = true;
+		renderer.useVirtualReality = false;
+		target.setAttribute('view_type', 'fm');
+	},
+	useVirtualReality: function(){
+		var self = this;
+		var target = self.btnView;
+		var renderer = self.renderer;
+		renderer.useFullMotion = false;
+		renderer.useVirtualReality = true;
+		target.setAttribute('view_type', 'vr');
 	},
 	requestFullScreen: function(){
 		var self = this;

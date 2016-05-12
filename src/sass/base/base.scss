@@ -9,7 +9,7 @@ $control-border-width: 0;
 $control-scroll-height: 10px;
 $control-scroll-pointer-width: 18px;
 $control-scroll-pointer-height: 18px;
-$control-btn-width: 48px;
+$control-btn-width: 40px; //48px
 $control-btn-border-left: 1px solid #3A3A3A;
 $control-btn-border-right: 1px solid #3A3A3A;
 $control-btn-background-size: 32px 32px;
@@ -97,6 +97,7 @@ $control-btn-background-size: 32px 32px;
 .#{$namespace}-control-btn-play,
 .#{$namespace}-control-btn-volume,
 .#{$namespace}-control-btn-swipe,
+.#{$namespace}-control-btn-view,
 .#{$namespace}-control-btn-fullscreen{
 	@include btn();
 	@include btnImage();
@@ -129,6 +130,16 @@ $control-btn-background-size: 32px 32px;
 	}
 	&[swipe_type="motion"]{
 		background-image: imageUrl($image-btn-swipe-motion);
+	}
+}
+.#{$namespace}-control-btn-view{
+	float: right; 
+	border-left: $control-btn-border-left;
+	&[view_type="fm"]{
+		background-image: imageUrl($image-btn-view-fm);
+	}
+	&[view_type="vr"]{
+		background-image: imageUrl($image-btn-view-vr);
 	}
 }
 .#{$namespace}-control-btn-fullscreen{ 

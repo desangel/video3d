@@ -293,6 +293,7 @@ var meta = {
 		btnPlay: name+'btn-play',
 		btnVolume: name+'btn-volume',
 		btnSwipe: name+'btn-swipe',
+		btnView: name+'btn-view',
 		btnFullScreen: name+'btn-fullscreen',
 		txtTime: name+'txt-time'
 	},
@@ -308,6 +309,7 @@ var defaultControlOptions = {
 	btnPlay: true,
 	btnVolume: true,
 	btnSwipe: true,
+	btnView: true,
 	btnFullScreen: true,
 	txtTime: true,
 	dragFile: true
@@ -350,6 +352,7 @@ Control.prototype = {
 		var btnPlay = buttonDom.createElement({ className: namespace+meta.className.btnPlay });
 		var btnVolume = buttonDom.createElement({ className: namespace+meta.className.btnVolume });
 		var btnSwipe = buttonDom.createElement({ className: namespace+meta.className.btnSwipe });
+		var btnView = buttonDom.createElement({ className: namespace+meta.className.btnView });
 		var btnFullScreen = buttonDom.createElement({ className: namespace+meta.className.btnFullScreen });
 		var txtTime = dom.createElement({ className: namespace+meta.className.txtTime });
 		
@@ -358,6 +361,7 @@ Control.prototype = {
 			btnPlay: btnPlay,
 			btnVolume: btnVolume,
 			btnSwipe: btnSwipe,
+			btnView: btnView,
 			btnFullScreen: btnFullScreen,
 			txtTime: txtTime
 		};
@@ -378,6 +382,7 @@ Control.prototype = {
 		controlContainer.appendChild(btnPlay);
 		controlContainer.appendChild(txtTime);
 		controlContainer.appendChild(btnFullScreen);
+		controlContainer.appendChild(btnView);
 		controlContainer.appendChild(btnSwipe);
 		controlContainer.appendChild(btnVolume);
 		
@@ -393,6 +398,7 @@ Control.prototype = {
 		self.btnPlay = btnPlay;
 		self.btnVolume = btnVolume;
 		self.btnSwipe = btnSwipe;
+		self.btnView = btnView;
 		self.btnFullScreen = btnFullScreen;
 		self.txtTime = txtTime;
 		
@@ -408,6 +414,7 @@ Control.prototype = {
 		
 		self.renderVolume();
 		self.useTouch();
+		self.useFullMotion();
 		
 		//bind event
 		var isInit = false;
@@ -482,6 +489,7 @@ Control.prototype = {
 		btnPlay.addEventListener('click', handleBtnPlay);
 		btnVolume.addEventListener('click', handleBtnVolume);
 		btnSwipe.addEventListener('click', handleBtnSwipe);
+		btnView.addEventListener('click', handleBtnView);
 		btnFullScreen.addEventListener('click', handleBtnFullScreen);
 		
 		
@@ -496,6 +504,10 @@ Control.prototype = {
 		
 		function handleBtnSwipe(){
 			self.toggleSwipe();
+		}
+		
+		function handleBtnView(){
+			self.toggleView();
 		}
 		
 		function handleBtnFullScreen(){
@@ -673,6 +685,32 @@ Control.prototype = {
 			target.setAttribute('swipe_type', 'motion');
 		}
 	},
+	toggleView: function(){
+		var self = this;
+		var target = self.btnView;
+		var type = target.getAttribute('view_type');
+		if(type==='fm'){
+			self.useVirtualReality();
+		}else{
+			self.useFullMotion();
+		}
+	},
+	useFullMotion: function(){
+		var self = this;
+		var target = self.btnView;
+		var renderer = self.renderer;
+		renderer.useFullMotion = true;
+		renderer.useVirtualReality = false;
+		target.setAttribute('view_type', 'fm');
+	},
+	useVirtualReality: function(){
+		var self = this;
+		var target = self.btnView;
+		var renderer = self.renderer;
+		renderer.useFullMotion = false;
+		renderer.useVirtualReality = true;
+		target.setAttribute('view_type', 'vr');
+	},
 	requestFullScreen: function(){
 		var self = this;
 		var target = self.container;
@@ -733,6 +771,7 @@ module.exports = Player;
 "use strict";
 require('./requestAnimFrame');
 var variables = require('../variables');
+var util = require('../util');
 var html = require('../html');
 var createjs = require('tween').createjs;
 
@@ -745,6 +784,14 @@ var meta = {
 		container: 'renderer',
 		canvas: name+'canvas'
 	}
+};
+
+var defaultOptions = {
+	outContainer: document.body,
+	useTouch: true,
+	useDeviceMotion: false,
+	useFullMotion: true,
+	useVirtualReality: false
 };
 
 var VideoTexture = function ( video, mapping, wrapS, wrapT, magFilter, minFilter, format, type, anisotropy ) {
@@ -801,11 +848,13 @@ Renderer.prototype.updateTexture = function(){
 };
 Renderer.prototype.init = function(options){
 	var self = this;
-	options = options||{};
-	var outContainer = options.container||document.body;
+	options = util.extend(options, defaultOptions);
+	var outContainer = options.container;
 	var video = options.video;
-	var useTouch = options.useTouch!==undefined?options.useTouch:true;
-	var useDeviceMotion = options.useDeviceMotion!==undefined?options.useDeviceMotion:false;
+	var useTouch = options.useTouch;
+	var useDeviceMotion = options.useDeviceMotion;
+	var useFullMotion =options.useFullMotion;
+	var useVirtualReality =options.useVirtualReality;
 	
 	var finger = {};   //for touch one
 	
@@ -816,9 +865,14 @@ Renderer.prototype.init = function(options){
 	
 	var defaultFov = 75;
 	
-	var scene;
-	var camera, renderer;
+	var scene, sceneLeft, sceneRight;
+	var camera;
+	var renderer;
+	var vrEffect;
 	var canvas;
+	
+	var i;
+	//var j;
 
 	//var controls;
 	//var INTERSECTED;
@@ -838,11 +892,35 @@ Renderer.prototype.init = function(options){
 	scene = new THREE.Scene();
 	var geometry = new THREE.SphereGeometry( 500, 32, 15 ); //  500, 60, 40
 	geometry.scale( -1, 1, 1 );
+	geometry.rotateY( -Math.PI/2 );
 	
 	var material = new THREE.MeshBasicMaterial( { overdraw: 0.5, side:THREE.DoubleSide } );
 	var mesh = new THREE.Mesh( geometry, material );
-	//mesh.rotation.y = - Math.PI / 2;
 	scene.add( mesh );
+	
+	//var uvs;
+	sceneLeft = new THREE.Scene();
+	//var geometryLeft = geometry.clone();
+	//uvs = geometryLeft.faceVertexUvs[ 0 ];
+	//for (  i = 0; i < uvs.length; i ++ ) {
+	//	for (  j = 0; j < 3; j ++ ) {
+	//		uvs[ i ][ j ].x *= 0.5;
+	//	}
+	//}
+	var meshLeft = new THREE.Mesh( geometry, material );
+	sceneLeft.add(meshLeft);
+	
+	sceneRight = new THREE.Scene();
+	//var geometryRight = geometry.clone();
+	//uvs = geometryRight.faceVertexUvs[ 0 ];
+	//for (  i = 0; i < uvs.length; i ++ ) {
+	//	for (  j = 0; j < 3; j ++ ) {
+	//		uvs[ i ][ j ].x *= 0.5;
+	//		uvs[ i ][ j ].x += 0.5;
+	//	}
+	//}
+	var meshRight = new THREE.Mesh( geometry, material );
+	sceneRight.add(meshRight);
 	
 	//
 	renderer = new THREE.WebGLRenderer();
@@ -850,10 +928,14 @@ Renderer.prototype.init = function(options){
 	renderer.setPixelRatio( devicePixelRatio );
 	renderer.setSize( canvasWidth, canvasHeight );
 	
+	if(THREE.VREffect){
+		vrEffect = new THREE.VREffect(renderer);
+	}
+	
 	canvas = renderer.domElement;
 	container.appendChild( renderer.domElement );
 	//document.body.appendChild( renderer.domElement );
-	
+
 	//
 	camera = new THREE.PerspectiveCamera( defaultFov, canvasWidth / canvasHeight, 1, 10000 );
 	
@@ -877,11 +959,12 @@ Renderer.prototype.init = function(options){
 	
 	var g = {
 		renderer: renderer,
+		vrEffect: vrEffect,
 		camera: camera,
 		mesh: mesh
 	};
 	
-	for(var i in g){
+	for(i in g){
 		self[i] = g[i];
 	}
 	self.keyframe = options.keyframe;
@@ -893,6 +976,8 @@ Renderer.prototype.init = function(options){
 	self.video = video;
 	self.useTouch = useTouch;
 	self.useDeviceMotion = useDeviceMotion;
+	self.useFullMotion = useFullMotion;
+	self.useVirtualReality = useVirtualReality;
 	self.material = material;
 	
 	self.swipeAnimCoefX = 4;
@@ -944,18 +1029,18 @@ Renderer.prototype.init = function(options){
 		if ( !self.useDeviceMotion )return;
 		var beta = event.beta; //前后
 		var gamma = event.gamma; // 左右
-		if(beta<30){
-			lat = beta;
-		}else if(beta>60){
-			lat = beta;
-		}
+		//if(beta<30){
+		//	lat = beta;
+		//}else if(beta>60){
+		//	lat = beta;
+		//}
 		lat = beta;
 		
-		if(gamma > 20){ 
-			lon = gamma;
-		}else if(gamma < 20){
-			lon = gamma;
-		}
+		//if(gamma > 20){ 
+		//	lon = gamma;
+		//}else if(gamma < 20){
+		//	lon = gamma;
+		//}
 		lon = gamma;
 	}
 	
@@ -1215,7 +1300,40 @@ Renderer.prototype.init = function(options){
 		cameraLookAt();
 		
 		renderer.setClearColor(0,0,0,0);
-        renderer.render( scene, camera );
+		var left,bottom,width,height;
+		left = canvasWidth * 0;
+		bottom = canvasHeight * 0;
+		height = canvasHeight * 1;
+		//if(self.useVirtualReality&&vrEffect){ //useVirtualReality
+		if(self.useVirtualReality){ //useVirtualReality
+			//renderer.render( [ sceneLeft, sceneRight ], camera );
+			//vrEffect.render( scene, camera );
+			renderer.enableScissorTest( true );
+			renderer.clear();
+			
+			width = canvasWidth * 0.5;
+			camera.aspect = width/height;
+			camera.updateProjectionMatrix();
+			
+			renderer.setViewport(left,bottom,width,height);
+			renderer.setScissor(left,bottom,width,height);
+			renderer.render( sceneLeft, camera );
+			
+			left = canvasWidth * 0.5;
+			renderer.setViewport(left,bottom,width,height);
+			renderer.setScissor(left,bottom,width,height);
+			renderer.render( sceneRight, camera );
+			
+			renderer.enableScissorTest( false );
+			
+		}else{ //useFullMotion
+			width = canvasWidth * 1;
+			camera.aspect = width/height;
+			camera.updateProjectionMatrix();
+			renderer.setViewport(left,bottom,width,height);
+			renderer.render( scene, camera );
+		}
+        
 		//renderer.context.flush();
 		function cameraLookAt(){
 			var a = 300;
@@ -1241,7 +1359,7 @@ Renderer.prototype.init = function(options){
 
 
 module.exports = Renderer;
-},{"../html":3,"../variables":22,"./requestAnimFrame":10,"tween":"tween"}],10:[function(require,module,exports){
+},{"../html":3,"../util":19,"../variables":22,"./requestAnimFrame":10,"tween":"tween"}],10:[function(require,module,exports){
 /* global window */
 "use strict";
 function initRequestAnimationFrame(){

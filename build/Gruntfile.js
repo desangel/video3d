@@ -139,7 +139,6 @@ module.exports = function(grunt) {
 				src: ['Gruntfile.js', 'grunt/*.js']
 			},
 			src: {
-				//src: '<%= meta.path.jsPath %>*.js'
 				src: '<%= meta.path.basePath %><%= meta.path.jsPath %>*'
 			}
 		},
