@@ -118,6 +118,7 @@ Renderer.prototype.init = function(options){
 	var canvasWidth;
 	var canvasHeight;
 	var devicePixelRatio = window.devicePixelRatio||1;
+	var orientation;
 	updateSize();
 	
 	scene = new THREE.Scene();
@@ -217,11 +218,20 @@ Renderer.prototype.init = function(options){
 	self.getCoordinates = function(){
 		return {lon:lon, lat:lat};
 	};
+	self.getDeviceStatus = function(){
+		return {
+			motion: motionParam,
+			orientation: orientationParam
+		};
+	};
 	
 	self.createTexture(video);
 	
 	var isStop = false;
 	var isPause = false;
+	var isLandscape = false;
+	var motionParam, orientationParam;
+	
 	function start(){
 		if(isStop||isPause){
 			isPause = false;
@@ -241,38 +251,79 @@ Renderer.prototype.init = function(options){
 	}
 	
 	function motionHandler(){
+		//return; //阻止横竖屏幕切换
+		
+		//motionParam = motionParam||{};
+		//motionParam.interval = event.interval;
+		//motionParam.acc = event.acceleration;
+		//motionParam.accGravity = event.accelerationIncludingGravity;
+		//motionParam.rotationRate = event.rotationRate;
 		//document.getElementById("interval").innerHTML = event.interval;  
 		//var acc = event.acceleration;  
-		//document.getElementById("x").innerHTML = acc.x;  
-		//document.getElementById("y").innerHTML = acc.y;  
-		//document.getElementById("z").innerHTML = acc.z;  
+		//document.getElementById("x").innerHTML = acc.x;  //x轴加快度
+		//document.getElementById("y").innerHTML = acc.y;  //y轴加快度
+		//document.getElementById("z").innerHTML = acc.z;  //z轴加快度
 		//var accGravity = event.accelerationIncludingGravity;  
-		//document.getElementById("xg").innerHTML = accGravity.x;  
-		//document.getElementById("yg").innerHTML = accGravity.y;  
-		//document.getElementById("zg").innerHTML = accGravity.z;  
+		//document.getElementById("xg").innerHTML = accGravity.x;  //x轴加快度(推敲重力加快度)
+		//document.getElementById("yg").innerHTML = accGravity.y;  //y轴加快度(推敲重力加快度)
+		//document.getElementById("zg").innerHTML = accGravity.z;  //z轴加快度(推敲重力加快度)
 		//var rotationRate = event.rotationRate;  
-		//document.getElementById("Ralpha").innerHTML = rotationRate.alpha;  
-		//document.getElementById("Rbeta").innerHTML = rotationRate.beta;  
-		//document.getElementById("Rgamma").innerHTML = rotationRate.gamma;  
+		//document.getElementById("Ralpha").innerHTML = rotationRate.alpha; //上下扭转速度
+		//document.getElementById("Rbeta").innerHTML = rotationRate.beta;   //前后扭转速度
+		//document.getElementById("Rgamma").innerHTML = rotationRate.gamma; //扭转速度
 	}
 	
+	var compassHeading;
 	function orientationHandler(event){
-		if ( !self.useDeviceMotion )return;
-		var beta = event.beta; //前后
-		var gamma = event.gamma; // 左右
-		//if(beta<30){
-		//	lat = beta;
-		//}else if(beta>60){
-		//	lat = beta;
-		//}
-		lat = beta;
+		orientationParam = orientationParam||{};
+		orientationParam.alpha = event.alpha; //上下
+		orientationParam.beta = event.beta; //前后
+		orientationParam.gamma = event.gamma; //左右
+		orientationParam.compassHeading = event.webkitCompassHeading; //指北针指向
+		orientationParam.compassAccuracy = event.webkitCompassAccuracy; //指北针精度
+		if ( !self.useDeviceMotion ){
+			compassHeading = undefined;
+			return;
+		}
 		
-		//if(gamma > 20){ 
-		//	lon = gamma;
-		//}else if(gamma < 20){
-		//	lon = gamma;
-		//}
-		lon = gamma;
+		var beta = event.beta;
+		var gamma = event.gamma;
+		if(isLandscape){
+			
+			if( Math.abs(beta)>90 && Math.abs(gamma)<45 ){
+				gamma = Math.abs(gamma);
+				if(orientation===-90){
+					gamma = -Math.abs(gamma);
+				}else{
+					gamma = Math.abs(gamma);
+				}
+			}else if(Math.abs(beta)<90 && Math.abs(gamma)<45){
+				if(orientation===-90){
+					gamma = Math.abs(gamma);
+				}else{
+					gamma = -Math.abs(gamma);
+				}
+			}
+			lat = gamma>=0?( 90 - gamma):( -90 - gamma);
+			if(orientation===-90){
+				lat = -lat;
+			}
+		}else{
+			lat = (beta - 80);
+		}
+		lat = - lat;
+		
+		var currentCompassHeading = event.webkitCompassHeading;
+		var deltaLon = 0;
+		if(compassHeading===undefined){
+			compassHeading = currentCompassHeading;
+		}else{
+			deltaLon = currentCompassHeading-compassHeading;
+		}
+		lon -= deltaLon;
+		compassHeading = currentCompassHeading;
+		
+		setLonLat(lon, lat);
 	}
 	
 	function onDocumentMouseDown( event ) {
@@ -465,13 +516,15 @@ Renderer.prototype.init = function(options){
 	}
 
 	function getRendererSize(){  //for ios & wechat
-		var orientation = window.orientation;
+		orientation = window.orientation;
 		var width, height;
 		if(orientation!==undefined){ //for   
 			if(orientation===0||orientation===180){ //when Portrait  0, 180
+				isLandscape = false;
 				width = Math.min(window.innerWidth, window.screen.width);
 				height = Math.min(window.innerHeight, window.screen.height);
 			}else{ //when Landscape  90, -90
+				isLandscape = true;
 				width = Math.min(window.innerWidth, window.screen.height);
 				height = Math.min(window.innerHeight, window.screen.width);
 			}

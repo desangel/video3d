@@ -3,6 +3,7 @@
 "use strict";
 
 var variables = require('./variables');
+var util = require('./util');
 var dom = require('./html');
 var Player = require('./player');
 
@@ -56,6 +57,7 @@ Video3d.prototype = {
 		self.container = container;
 		self.video = video;
 		self.player = player;
+		self.util = util;
 		if(typeof callbacks.init === 'function'){
 			callbacks.init(self);
 		}

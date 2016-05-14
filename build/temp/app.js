@@ -191,6 +191,7 @@ module.exports = {
 "use strict";
 
 var variables = require('./variables');
+var util = require('./util');
 var dom = require('./html');
 var Player = require('./player');
 
@@ -244,6 +245,7 @@ Video3d.prototype = {
 		self.container = container;
 		self.video = video;
 		self.player = player;
+		self.util = util;
 		if(typeof callbacks.init === 'function'){
 			callbacks.init(self);
 		}
@@ -266,7 +268,7 @@ Video3d.prototype = {
 module.exports = Video3d;
 global.video3d = Video3d;
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./html":3,"./player":8,"./variables":22}],7:[function(require,module,exports){
+},{"./html":3,"./player":8,"./util":21,"./variables":24}],7:[function(require,module,exports){
 /* global window, document */
 "use strict";
 require('./requestFullScreen');
@@ -729,7 +731,7 @@ Control.prototype = {
 
 
 module.exports = Control;
-},{"../html":3,"../util":19,"../variables":22,"./requestFullScreen":11}],8:[function(require,module,exports){
+},{"../html":3,"../util":21,"../variables":24,"./requestFullScreen":11}],8:[function(require,module,exports){
 /**
 * player
 */
@@ -887,6 +889,7 @@ Renderer.prototype.init = function(options){
 	var canvasWidth;
 	var canvasHeight;
 	var devicePixelRatio = window.devicePixelRatio||1;
+	var orientation;
 	updateSize();
 	
 	scene = new THREE.Scene();
@@ -986,11 +989,20 @@ Renderer.prototype.init = function(options){
 	self.getCoordinates = function(){
 		return {lon:lon, lat:lat};
 	};
+	self.getDeviceStatus = function(){
+		return {
+			motion: motionParam,
+			orientation: orientationParam
+		};
+	};
 	
 	self.createTexture(video);
 	
 	var isStop = false;
 	var isPause = false;
+	var isLandscape = false;
+	var motionParam, orientationParam;
+	
 	function start(){
 		if(isStop||isPause){
 			isPause = false;
@@ -1010,38 +1022,79 @@ Renderer.prototype.init = function(options){
 	}
 	
 	function motionHandler(){
+		//return; //阻止横竖屏幕切换
+		
+		//motionParam = motionParam||{};
+		//motionParam.interval = event.interval;
+		//motionParam.acc = event.acceleration;
+		//motionParam.accGravity = event.accelerationIncludingGravity;
+		//motionParam.rotationRate = event.rotationRate;
 		//document.getElementById("interval").innerHTML = event.interval;  
 		//var acc = event.acceleration;  
-		//document.getElementById("x").innerHTML = acc.x;  
-		//document.getElementById("y").innerHTML = acc.y;  
-		//document.getElementById("z").innerHTML = acc.z;  
+		//document.getElementById("x").innerHTML = acc.x;  //x轴加快度
+		//document.getElementById("y").innerHTML = acc.y;  //y轴加快度
+		//document.getElementById("z").innerHTML = acc.z;  //z轴加快度
 		//var accGravity = event.accelerationIncludingGravity;  
-		//document.getElementById("xg").innerHTML = accGravity.x;  
-		//document.getElementById("yg").innerHTML = accGravity.y;  
-		//document.getElementById("zg").innerHTML = accGravity.z;  
+		//document.getElementById("xg").innerHTML = accGravity.x;  //x轴加快度(推敲重力加快度)
+		//document.getElementById("yg").innerHTML = accGravity.y;  //y轴加快度(推敲重力加快度)
+		//document.getElementById("zg").innerHTML = accGravity.z;  //z轴加快度(推敲重力加快度)
 		//var rotationRate = event.rotationRate;  
-		//document.getElementById("Ralpha").innerHTML = rotationRate.alpha;  
-		//document.getElementById("Rbeta").innerHTML = rotationRate.beta;  
-		//document.getElementById("Rgamma").innerHTML = rotationRate.gamma;  
+		//document.getElementById("Ralpha").innerHTML = rotationRate.alpha; //上下扭转速度
+		//document.getElementById("Rbeta").innerHTML = rotationRate.beta;   //前后扭转速度
+		//document.getElementById("Rgamma").innerHTML = rotationRate.gamma; //扭转速度
 	}
 	
+	var compassHeading;
 	function orientationHandler(event){
-		if ( !self.useDeviceMotion )return;
-		var beta = event.beta; //前后
-		var gamma = event.gamma; // 左右
-		//if(beta<30){
-		//	lat = beta;
-		//}else if(beta>60){
-		//	lat = beta;
-		//}
-		lat = beta;
+		orientationParam = orientationParam||{};
+		orientationParam.alpha = event.alpha; //上下
+		orientationParam.beta = event.beta; //前后
+		orientationParam.gamma = event.gamma; //左右
+		orientationParam.compassHeading = event.webkitCompassHeading; //指北针指向
+		orientationParam.compassAccuracy = event.webkitCompassAccuracy; //指北针精度
+		if ( !self.useDeviceMotion ){
+			compassHeading = undefined;
+			return;
+		}
 		
-		//if(gamma > 20){ 
-		//	lon = gamma;
-		//}else if(gamma < 20){
-		//	lon = gamma;
-		//}
-		lon = gamma;
+		var beta = event.beta;
+		var gamma = event.gamma;
+		if(isLandscape){
+			
+			if( Math.abs(beta)>90 && Math.abs(gamma)<45 ){
+				gamma = Math.abs(gamma);
+				if(orientation===-90){
+					gamma = -Math.abs(gamma);
+				}else{
+					gamma = Math.abs(gamma);
+				}
+			}else if(Math.abs(beta)<90 && Math.abs(gamma)<45){
+				if(orientation===-90){
+					gamma = Math.abs(gamma);
+				}else{
+					gamma = -Math.abs(gamma);
+				}
+			}
+			lat = gamma>=0?( 90 - gamma):( -90 - gamma);
+			if(orientation===-90){
+				lat = -lat;
+			}
+		}else{
+			lat = (beta - 80);
+		}
+		lat = - lat;
+		
+		var currentCompassHeading = event.webkitCompassHeading;
+		var deltaLon = 0;
+		if(compassHeading===undefined){
+			compassHeading = currentCompassHeading;
+		}else{
+			deltaLon = currentCompassHeading-compassHeading;
+		}
+		lon -= deltaLon;
+		compassHeading = currentCompassHeading;
+		
+		setLonLat(lon, lat);
 	}
 	
 	function onDocumentMouseDown( event ) {
@@ -1234,13 +1287,15 @@ Renderer.prototype.init = function(options){
 	}
 
 	function getRendererSize(){  //for ios & wechat
-		var orientation = window.orientation;
+		orientation = window.orientation;
 		var width, height;
 		if(orientation!==undefined){ //for   
 			if(orientation===0||orientation===180){ //when Portrait  0, 180
+				isLandscape = false;
 				width = Math.min(window.innerWidth, window.screen.width);
 				height = Math.min(window.innerHeight, window.screen.height);
 			}else{ //when Landscape  90, -90
+				isLandscape = true;
 				width = Math.min(window.innerWidth, window.screen.height);
 				height = Math.min(window.innerHeight, window.screen.width);
 			}
@@ -1359,7 +1414,7 @@ Renderer.prototype.init = function(options){
 
 
 module.exports = Renderer;
-},{"../html":3,"../util":19,"../variables":22,"./requestAnimFrame":10,"tween":"tween"}],10:[function(require,module,exports){
+},{"../html":3,"../util":21,"../variables":24,"./requestAnimFrame":10,"tween":"tween"}],10:[function(require,module,exports){
 /* global window */
 "use strict";
 function initRequestAnimationFrame(){
@@ -1469,6 +1524,43 @@ module.exports = {
 	createMessage: createMessage
 };
 },{"../html":3}],13:[function(require,module,exports){
+/* global window */
+"use strict";
+
+/**
+* check browser
+*/
+var navigator = window.navigator;
+var browser={
+    versions: (function(){
+        var u = navigator.userAgent, app = navigator.appVersion;
+		var vendor = navigator.vendor;
+        return {
+        	u: u,
+        	app: app,
+			vendor: vendor,
+            windows: u.indexOf('Windows') > -1, //windows
+            trident: u.indexOf('Trident') > -1, //IE内核
+            presto: u.indexOf('Presto') > -1, //opera内核
+            webKit: u.indexOf('AppleWebKit') > -1, //苹果、谷歌内核
+            gecko: u.indexOf('Gecko') > -1 && u.indexOf('KHTML') === -1,//火狐内核
+            chrome: u.indexOf('Chrome') > -1 ,//chrome内核
+            mobile: !!u.match(/AppleWebKit.*Mobile.*/), //是否为移动终端
+            ios: !!u.match(/\(i[^;]+;( U;)? CPU.+Mac OS X/), //ios终端
+            android: u.indexOf('Android') > -1 || u.indexOf('Linux') > -1, //android终端或者uc浏览器
+            iPhone: u.indexOf('iPhone') > -1 , //是否为iPhone或者QQHD浏览器
+            iPad: u.indexOf('iPad') > -1, //是否iPad
+            webApp: u.indexOf('Safari') === -1, //是否web应该程序，没有头部与底部
+            weixin: u.indexOf('MicroMessenger') > -1, //是否微信 （2015-01-22新增）
+            weibo: u.indexOf('Weibo') > -1, //是否微博
+            qq: u.match(/\sQQ/i) === " qq" //是否QQ
+        };
+    })(),
+    language:(navigator.browserLanguage || navigator.language).toLowerCase(),
+};
+
+module.exports = browser;
+},{}],14:[function(require,module,exports){
 /* global xyz */
 "use strict";
 //inheritance
@@ -1505,8 +1597,32 @@ function classExtend(ChildClass, ParentClass){
 	}
 }
 
-module.exports = classExtend;
-},{}],14:[function(require,module,exports){
+module.exports = {
+	classExtend: classExtend
+};
+},{}],15:[function(require,module,exports){
+/* global document */
+"use strict";
+function htmlEncode(value){
+	var temp = document.createElement('div');
+	(temp.textContent!=null)?(temp.textContent=value) : (temp.innerText=value);
+	var result = temp.html.innerHTML;
+	temp = null;
+	return result;
+}
+	
+function htmlDecode(value){
+	var temp = document.createElement('div');
+	temp.innerHTML = value;
+	var result = temp.innerText || temp.textContent;
+	temp = null;
+	return result;
+}
+module.exports = {
+	htmlEncode: htmlEncode,
+	htmlDecode: htmlDecode
+};
+},{}],16:[function(require,module,exports){
 "use strict";
 function is(arr, element){
 	for(var i = 0; i<arr.length; i++){
@@ -1519,10 +1635,75 @@ function is(arr, element){
 	return false;
 }
 
+function objToStr(obj){
+	var result;
+	if(obj instanceof Array){
+		result = arrayToStr(obj);
+	}else if(typeof obj === 'object'){
+		result = objectToStr(obj);
+	}else{
+		result = obj.toString();
+	}
+	return result;
+}
+
+function objectToStr(obj, indent){
+	indent = indent||0;
+	var result = '{\n';
+	for(var i in obj){
+		result += indentToStr(' ', indent+2)+ i + ' : ';
+		var item = obj[i];
+		if((item instanceof Array)){
+			result += arrayToStr(item, indent+2) ;
+		}else if(typeof item === 'object'){
+			result+= objectToStr(item, indent+2);
+		}else{
+			result+= item;
+		}
+		result+= ',\n';
+	}
+	if(result.length===result.lastIndexOf(',')+2)result = result.substr(0, result.length-2)+'\n';
+	result += indentToStr(' ', indent) + '}';
+	return result;
+}
+
+function arrayToStr(obj, indent){
+	indent = indent||0;
+	var result = '[\n';
+	for(var i in obj){
+		var item = obj[i];
+		result += indentToStr(' ', indent+2);
+		if((item instanceof Array)){
+			result += arrayToStr(item, indent+2) ;
+		}else if(typeof item === 'object'){
+			result+= objectToStr(item, indent+2);
+		}else{
+			result+= item ;
+		}
+		result+= ',\n';
+	}
+	if(result.length===result.lastIndexOf(',')+2)result = result.substr(0, result.length-2)+'\n';
+	result += indentToStr(' ', indent) + ']';
+	return result;
+}
+
+function indentToStr(ch, indent){
+	var result = '';
+	for(var i = 0; i< indent; i++){
+		result+=ch;
+	}
+	return result;
+}
+
 module.exports = {
-	is: is
+	is: is,
+	
+	objToStr: objToStr,
+	objectToStr: objectToStr,
+	arrayToStr: arrayToStr,
+	indentToStr: indentToStr
 };
-},{}],15:[function(require,module,exports){
+},{}],17:[function(require,module,exports){
 /* global document, window  */
 "use strict";
 function addCookie(name, value, attr){
@@ -1559,7 +1740,7 @@ module.exports = {
 	getCookie: getCookie,
 	getDocumentCookie: getDocumentCookie
 };
-},{}],16:[function(require,module,exports){
+},{}],18:[function(require,module,exports){
 /* //global document, window  */
 "use strict";
 
@@ -1703,7 +1884,7 @@ module.exports = {
 	type: type,
 	extend: extend
 };
-},{}],17:[function(require,module,exports){
+},{}],19:[function(require,module,exports){
 
 /**
  * 
@@ -2106,7 +2287,7 @@ var getDateHelper = function(){
 };
 
 module.exports = getDateHelper();
-},{}],18:[function(require,module,exports){
+},{}],20:[function(require,module,exports){
 /* global window */
 "use strict";
 
@@ -2114,7 +2295,9 @@ if(!window){
 	return;
 }
 window.URL = window.URL||window.webkitURL;
-},{}],19:[function(require,module,exports){
+
+
+},{}],21:[function(require,module,exports){
 
 "use strict";
 require('./hack');
@@ -2122,12 +2305,16 @@ var classExtend = require('./classExtend');
 var core = require('./core');
 var object = require('./object');
 
+var browser = require('./browser');
+var code = require('./code');
 var collection = require('./collection');
 var cookie = require('./cookie');
 var date = require('./date');
 var path = require('./path');
 
 var util = {
+	browser: browser,
+	code: code,
 	collection: collection,
 	cookie: cookie,
 	date: date,
@@ -2135,9 +2322,8 @@ var util = {
 };
 util = core.extend(true, util, core, classExtend, object);
 
-
 module.exports = util;
-},{"./classExtend":13,"./collection":14,"./cookie":15,"./core":16,"./date":17,"./hack":18,"./object":20,"./path":21}],20:[function(require,module,exports){
+},{"./browser":13,"./classExtend":14,"./code":15,"./collection":16,"./cookie":17,"./core":18,"./date":19,"./hack":20,"./object":22,"./path":23}],22:[function(require,module,exports){
 "use strict";
 //ECMA SCRIPT 5
 function defineProperty(obj, name, prop){
@@ -2164,7 +2350,7 @@ module.exports = {
 	defineProperty: defineProperty,
 	defineProperties: defineProperties
 };
-},{}],21:[function(require,module,exports){
+},{}],23:[function(require,module,exports){
 /* global document */
 "use strict";
 function findCurrentPath(){
@@ -2193,7 +2379,7 @@ function findCurrentPath(){
 module.exports = {
 	findCurrentPath: findCurrentPath
 };
-},{}],22:[function(require,module,exports){
+},{}],24:[function(require,module,exports){
 
 "use strict";
 var namespace = 'video3d-';
@@ -2203,4 +2389,4 @@ module.exports = {
 	namespace: namespace,
 	displayHidden: displayHidden
 };
-},{}]},{},[6,22]);
+},{}]},{},[6,24]);

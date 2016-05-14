@@ -34,4 +34,6 @@ function classExtend(ChildClass, ParentClass){
 	}
 }
 
-module.exports = classExtend;
+module.exports = {
+	classExtend: classExtend
+};

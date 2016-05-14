@@ -32,7 +32,10 @@ body { position: absolute; top:0; bottom:0; left:0; width:100%; }
 }
  .btn-play:active:not(:disabled){ color: #666; background-color: #fff; border: 1px solid #fe9778; }
  
- .msg { position:fixed; z-index: 10; top:0; left;0; width: 100%; font-size: 16px; color: #efefef;}
+ .msgContainer{ position:fixed; z-index: 10; top:0; left;0; width: 100%; font-size: 16px; color: #efefef; white-space: pre-wrap; }
+ .msg { 
+	-webkit-overflow-scrolling:touch;
+ }
 </style>
 <script>
 /*  use for test
@@ -98,16 +101,56 @@ body { position: absolute; top:0; bottom:0; left:0; width:100%; }
 				}
 			});
 			
-			setInterval(function(){
-				text = player.video.readyState;
+			var interval = setInterval(function(){
+				text = player.video.readyState + '; orientation: '+ window.orientation;
 				var coord = player.player.renderer.getCoordinates();
-				text += '; lon: ' + coord.lon + '; lat: '+coord.lat;
+				text += '\n lon: ' + coord.lon + ';\n lat: '+coord.lat;
+				var deviceStatus = player.player.renderer.getDeviceStatus();
+				var orientationParam = deviceStatus.orientation;
+				var motionParam = deviceStatus.motion;
+				if(orientationParam&&orientationParam.alpha!==null){
+					text += '\n alpha: '+orientationParam.alpha
+						+'\n beta: '+orientationParam.beta
+						+'\n gamma: '+orientationParam.gamma
+						+'\n compassHeading: '+orientationParam.compassHeading
+						+'\n compassAccuracy: '+orientationParam.compassAccuracy;
+				}
+				if(motionParam&&motionParam.acc){
+					text += '\n interval: '+motionParam.interval
+						+'\n acc: ('+motionParam.acc.x+','+motionParam.acc.y+','+motionParam.acc.z+')'
+						+'\n accGravity: ('+motionParam.accGravity.x+','+motionParam.accGravity.y+','+motionParam.accGravity.z+')'
+						+'\n rotationRate: ('+motionParam.rotationRate.alpha+','+motionParam.rotationRate.beta+','+motionParam.rotationRate.gamma+')';
+						
+				}
+				
 				msg.innerHTML = text;
 			}, 50);
 			
 			
+			//enum OrientationLockType {
+			//	"any",
+			//	"natural",
+			//	"landscape",
+			//	"portrait",
+			//	"portrait-primary",
+			//	"portrait-secondary",
+			//	"landscape-primary",
+			//	"landscape-secondary"
+			//};
+
+		
+			//window.screen.lockOrientation = window.screen.orientation&&window.screen.orientation.lock||screen.lockOrientation ||screen.webkitLockOrientation ||screen.mozLockOrientation || screen.msLockOrientation;
+			//window.screen.unlockOrientation = window.screen.orientation&&window.screen.orientation.unlock||screen.unlockOrientation ||screen.webkitUnlockOrientation ||screen.mozUnlockOrientation  || screen.msUnlockOrientation;
+			//window.screen.lockOrientation('landscape-secondary');
+			//window.screen.orientation.lock('landscape-secondary');
+			//window.screen.lockOrientation('landscape-primary');
+			//window.screen.unlockOrientation();
+			
 		}catch(e){
-			msg.innerHTML = e.toString();
+			if(interval)window.clearInterval(interval);
+			text = e.toString();
+			//text = player.util.collection.objToStr(screen);
+			msg.innerHTML = text;
 			console.error(e);
 		}
 	}
@@ -116,6 +159,6 @@ body { position: absolute; top:0; bottom:0; left:0; width:100%; }
 <body onload="onload()">
 	<div id="playerContainer"></div>
 	<!-- <button class="btn-play" onclick="player.togglePlay();"></button> -->
-	<div id="msg" class="msg"></div>
+	<div class="msgContainer"><div id="msg" class="msg"></div></div>
 </body>
 </html>
