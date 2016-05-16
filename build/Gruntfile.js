@@ -160,7 +160,7 @@ module.exports = function(grunt) {
 				options: {
 					//require: ['jquery'],
 					//alias: { three: '../libs/three/three.js' },
-					alias: { tween: '../libs/tween/tweenjs-NEXT.combined.js' },
+					//alias: { tween: '../libs/tween/tweenjs-NEXT.combined.js' },
 					banner: '<%= meta.banner.jshint.node %>'
 				}
 			},

@@ -28,6 +28,7 @@ Video3d.prototype = {
 		options = options||{};
 		var container = options.container;
 		var control = options.control||{};
+		var renderer = options.renderer||{};
 		var videoSources = options.videoSources;
 		var callbacks = options.callbacks||{};
 		//var fullScreenMode = options.fullScreenMode||false; //全屏模式
@@ -51,7 +52,8 @@ Video3d.prototype = {
 		var player = new Player({
 			container: container,
 			video: video,
-			control: control
+			control: control,
+			renderer: renderer
 		});
 		
 		self.container = container;

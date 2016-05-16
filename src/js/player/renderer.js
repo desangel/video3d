@@ -4,7 +4,6 @@ require('./requestAnimFrame');
 var variables = require('../variables');
 var util = require('../util');
 var html = require('../html');
-var createjs = require('tween').createjs;
 
 var namespace = variables.namespace;
 var dom = html.dom;
@@ -17,12 +16,19 @@ var meta = {
 	}
 };
 
+var definitionType = {
+	low: 1,
+	hight: 2
+};
+
 var defaultOptions = {
 	outContainer: document.body,
 	useTouch: true,
 	useDeviceMotion: false,
 	useFullMotion: true,
-	useVirtualReality: false
+	useVirtualReality: false,
+	
+	definition: definitionType.low
 };
 
 var VideoTexture = function ( video, mapping, wrapS, wrapT, magFilter, minFilter, format, type, anisotropy ) {
@@ -86,8 +92,7 @@ Renderer.prototype.init = function(options){
 	var useDeviceMotion = options.useDeviceMotion;
 	var useFullMotion =options.useFullMotion;
 	var useVirtualReality =options.useVirtualReality;
-	
-	var finger = {};   //for touch one
+	var definition = options.definition;
 	
 	var container = dom.createElement({
 		className: namespace+meta.className.container
@@ -122,7 +127,13 @@ Renderer.prototype.init = function(options){
 	updateSize();
 	
 	scene = new THREE.Scene();
-	var geometry = new THREE.SphereGeometry( 500, 32, 15 ); //  500, 60, 40
+	var geometry;
+	if(definition === definitionType.high){
+		geometry = new THREE.SphereGeometry( 500, 32, 32 ); //  500, 60, 40
+	}else{
+		//geometry = new THREE.BoxGeometry( 500, 500, 500 ); //  500, 60, 40
+		geometry = new THREE.SphereGeometry( 500, 16, 16 );
+	}
 	geometry.scale( -1, 1, 1 );
 	geometry.rotateY( -Math.PI/2 );
 	
@@ -341,8 +352,15 @@ Renderer.prototype.init = function(options){
 	function onDocumentMouseMove( event ) {
 		if ( !self.useTouch )return;
 		if ( isUserInteracting === true ) {
-			lon = - ( onPointerDownPointerX - event.clientX ) * 0.1 + onPointerDownLon;
-			lat = - ( event.clientY - onPointerDownPointerY ) * 0.1 + onPointerDownLat;
+			var deltaLon = ( onPointerDownPointerX - event.touches[0].pageX ) * 0.1;
+			var deltaLat = ( event.touches[0].pageY - onPointerDownPointerY ) * 0.1;
+			lon = deltaLon + onPointerDownLon;
+			lat = deltaLat + onPointerDownLat;
+			
+			finger.targetLon = deltaLon + onPointerDownLon;
+			finger.targetLat = deltaLat + onPointerDownLat;
+			finger.lon = lon;
+			finger.lat = lat;
 		}
 		//intersect
 		var clientX = event.clientX;
@@ -355,6 +373,12 @@ Renderer.prototype.init = function(options){
 		isUserInteracting = false;
 	}
 	
+	var finger = {
+		lon: lon,
+		lat: lat,
+		targetLon: lon,
+		targetLat: lat
+	};   //for touch one
 	var touchesLength;
 	var touchesStart = [];
 	function onDocumentTouchStart( event ) {
@@ -368,12 +392,6 @@ Renderer.prototype.init = function(options){
 
 			onPointerDownLon = lon;
 			onPointerDownLat = lat;
-			
-			//intersect
-			var clientX = event.touches[0].pageX;
-			var clientY = event.touches[0].pageY;
-			mouse.x = (clientX - canvas.offsetLeft)/canvas.offsetWidth * 2 - 1;
-			mouse.y = (clientY - canvas.offsetTop)/canvas.offsetHeight * 2 - 1;
 		}else{
 			touchesStart = [];
 			for( var i = 0; i<event.touches.length; i++){
@@ -389,15 +407,13 @@ Renderer.prototype.init = function(options){
 		event.preventDefault();
 		if ( !self.useTouch )return;
 		if ( event.touches.length === 1 ) {
-			var deltaLon = - ( onPointerDownPointerX - event.touches[0].pageX ) * 0.1;
-			var deltaLat = - ( event.touches[0].pageY - onPointerDownPointerY ) * 0.1;
+			var deltaLon = ( onPointerDownPointerX - event.touches[0].pageX ) * 0.5;
+			var deltaLat = ( event.touches[0].pageY - onPointerDownPointerY ) * 0.5;
 			
-			lon = deltaLon + onPointerDownLon;
-			lat = deltaLat + onPointerDownLat;
-			setLonLat(lon, lat);
-			
-			finger.deltaLon = deltaLon;
-			finger.deltaLat = deltaLat;
+			finger.targetLon = deltaLon + onPointerDownLon;
+			finger.targetLat = deltaLat + onPointerDownLat;
+			finger.lon = lon;
+			finger.lat = lat;
 		}else if( event.touches.length === touchesStart.length){
 			var delta = 0;
 			var distanceStart = 0, distanceMove = 0;
@@ -417,53 +433,21 @@ Renderer.prototype.init = function(options){
 	
 	function onDocumentTouchEnd(){
 		if ( !self.useTouch )return;
-		//if ( event.changedTouches.length === 1 ) {
-		if ( touchesLength === 1 ) {
-			var deltaX = finger.deltaLon;
-			var deltaY = finger.deltaLat;
-			
-			var x = deltaX * self.swipeAnimCoefX;
-			var y = deltaY * self.swipeAnimCoefY;
-			
-			var checkDeltaX = Math.abs(lon - onPointerDownLon);
-			var checkDeltaY = Math.abs(lat - onPointerDownLat);
-			//console.log(checkDeltaX+':'+checkDeltaY);
-			if(checkDeltaX<5&&checkDeltaY<2.5){
-				createjs.Tween.removeTweens(finger);
-			}else{
-				finger.lon = finger.lat = 0;
-				var originLon = lon;
-				var originLat = lat;
-				createjs.Tween.get(finger, {override: true})
-				.to({ lon: x, lat: y }, 500, createjs.Ease.quadOut)
-				.addEventListener("change", function(e){
-					//console.log(e);
-					lon = originLon + e.target.target.lon;
-					lat = originLat + e.target.target.lat;
-					setLonLat(lon, lat);
-				});
-			}
-			finger.deltaLon = finger.deltaLat = 0;
-			
-			return createjs;
-		}
 	}
 	
-	function setLonLat(pLon, pLat){
+	function setLonLat(pLon, pLat, targetLon){
+		var precision = 1000;
 		pLon = pLon||0;
 		pLat = pLat||0;
-		lon = ( pLon % 360 + 360 + 180 ) % 360 - 180;
+		pLon = Math.floor(pLon*precision)/precision;
+		pLat = Math.floor(pLat*precision)/precision;
+		
+		lon = pLon;
+		if(targetLon){
+			targetLon = Math.floor(targetLon*precision)/precision;
+			if ( Math.abs(targetLon - pLon) < 0.002 ){ lon = ( pLon % 360 + 360 + 180 ) % 360 - 180; }
+		}
 		lat = Math.max( - 85, Math.min( 85, pLat ) );
-		
-		//var tLat = 90 - pLat;
-		//tLat = ( tLat % 360 + 360 ) % 360 ;
-		//if(tLat >= 0 && tLat < 180){
-		//	lat = 90 - tLat;
-		//}else{
-		//	lat = tLat - 270;
-		//	//lon = -lon;
-		//}
-		
 	}
 	
 	function onDocumentMouseWheel(event){
@@ -625,7 +609,10 @@ Renderer.prototype.init = function(options){
 				//lon += 0.1;
 			}
 			
-			//lat = Math.max( - 85, Math.min( 85, lat ) );
+			finger.lon += (finger.targetLon - finger.lon)*0.05;
+			finger.lat += (finger.targetLat - finger.lat)*0.05;
+			
+			setLonLat(finger.lon, finger.lat, finger.targetLon);
 			phi = THREE.Math.degToRad( lat );
 			theta = THREE.Math.degToRad( lon );
 			
