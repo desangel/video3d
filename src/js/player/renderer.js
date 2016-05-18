@@ -28,7 +28,9 @@ var defaultOptions = {
 	useFullMotion: true,
 	useVirtualReality: false,
 	
-	definition: definitionType.low
+	needEnoughData: true,
+	definition: definitionType.low,
+	
 };
 
 var VideoTexture = function ( video, mapping, wrapS, wrapT, magFilter, minFilter, format, type, anisotropy ) {
@@ -92,6 +94,7 @@ Renderer.prototype.init = function(options){
 	var useDeviceMotion = options.useDeviceMotion;
 	var useFullMotion =options.useFullMotion;
 	var useVirtualReality =options.useVirtualReality;
+	var needEnoughData = options.needEnoughData;
 	var definition = options.definition;
 	
 	var container = dom.createElement({
@@ -334,7 +337,8 @@ Renderer.prototype.init = function(options){
 		lon -= deltaLon;
 		compassHeading = currentCompassHeading;
 		
-		setLonLat(lon, lat);
+		finger.lon = finger.targetLon = lon;
+		finger.lat = finger.targetLat = lat;
 	}
 	
 	function onDocumentMouseDown( event ) {
@@ -541,10 +545,10 @@ Renderer.prototype.init = function(options){
 
 	function tick() {
 		if(!isStop){
-			if(!isPause && self.video.readyState===video.HAVE_ENOUGH_DATA){
-				//self.video.play();
+			if(!isPause && needEnoughData && self.video.readyState===video.HAVE_ENOUGH_DATA){
+				self.video.play();
 			}else{
-				//self.video.pause();
+				self.video.pause();
 			}
 			
 			render();

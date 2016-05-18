@@ -4,12 +4,16 @@ require('./requestFullScreen');
 var variables = require('../variables');
 var html = require('../html');
 var util = require('../util');
+var media = require('../media');
 var dom = html.dom;
 var buttonDom = html.button;
 
 var namespace = variables.namespace;
 var displayHidden = variables.displayHidden;
 var dateHelper = util.date;
+
+var URL = window.URL;
+var MediaSource = window.MediaSource;
 
 var name = 'control-';
 var meta = {
@@ -271,9 +275,59 @@ Control.prototype = {
 			video.load();
 		}
 	},
-	load: function(){
-		
-		
+	load: function(src){
+		var self = this;
+		var video = self.video;
+		if(typeof src === 'string'){
+			video.src = src;
+		}else if(util.isArray(src)){
+			var bytes = src;
+			var mediaSource = new MediaSource();
+				// setup the media source
+			mediaSource.addEventListener('sourceopen', function() {
+				var videoBuffer = mediaSource.addSourceBuffer('video/mp4;codecs=avc1.4d400d'),  //'video/mp4;codecs=avc1.4d400d'
+					audioBuffer = mediaSource.addSourceBuffer('audio/mp4;codecs=mp4a.40.2'),  //'audio/mp4;codecs=mp4a.40.2'
+					transmuxer = new media.mp2t.Transmuxer(),
+					videoSegments = [],
+					audioSegments = [];
+				// expose the machinery for debugging
+				
+				// transmux the MPEG-TS data to BMFF segments
+				transmuxer.on('data', function(segment) {
+					if (segment.type === 'video') {
+						videoSegments.push(segment);
+					} else {
+						audioSegments.push(segment);
+					}
+				});
+				transmuxer.push(bytes);  //media.hazeVideo
+				transmuxer.end();
+				// buffer up the video data
+				videoBuffer.appendBuffer(videoSegments.shift().data);
+				videoBuffer.addEventListener('updateend', function() {
+					if (videoSegments.length) {
+						videoBuffer.appendBuffer(videoSegments.shift().data);
+					}
+				});
+				// buffer up the audio data
+				audioBuffer.appendBuffer(audioSegments.shift().data);
+				audioBuffer.addEventListener('updateend', function() {
+					if (audioSegments.length) {
+						audioBuffer.appendBuffer(audioSegments.shift().data);
+					}
+				});
+				
+				self.sourceBuffer = videoBuffer;
+			});
+			
+			video.src = URL.createObjectURL(mediaSource);
+			self.mediaSource = mediaSource;
+		}
+		if(src){
+			video.load();
+			video.play();
+			video.pause();
+		}
 	},
 	keyframe: function(){  //param: renderer
 		var self = this;
@@ -320,6 +374,7 @@ Control.prototype = {
 		var target = self.btnPlay;
 		var isPause = target.hasAttribute('pause');
 		return !isPause;
+		//return !self.video.paused;
 	},
 	play: function(){
 		var self = this;

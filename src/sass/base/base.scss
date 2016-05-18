@@ -24,6 +24,14 @@ $control-btn-background-size: 32px 32px;
 	outline:none;
 }
 
+.#{$namespace}-video{ 
+	position: absolute;
+	top: 0; 
+	width: 1px; 
+	height: 1px; 
+	z-index: -100;
+}
+
 .#{$namespace}-renderer{ 
 	position: absolute;
 	top:0;

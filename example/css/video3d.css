@@ -17,6 +17,16 @@
     outline: none;
 }
 
+.video3d-video
+{
+    position: absolute;
+    z-index: -100;
+    top: 0;
+
+    width: 1px;
+    height: 1px;
+}
+
 .video3d-renderer
 {
     position: absolute;

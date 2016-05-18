@@ -8,5 +8,5 @@
 	"requireCapitalizedComments": null,
 
 	"excludeFiles": [ "external",
-		"test/node_smoke_tests/lib/ensure_iterability.js", "node_modules" ]
+		"../src/js/media/zencoder-haze.js", "node_modules" ]
 }

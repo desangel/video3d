@@ -9,7 +9,11 @@ function isFunction( obj ) {
 	return type(obj) === "function";
 }
 function isArray( obj ) {
-	return type(obj) === "array";
+	//return Array.isArray || type(obj) === "array";
+	return typeof obj === 'object' && 
+		typeof obj.length === 'number' && 
+		typeof obj.slice === 'function' && 
+		!(obj.propertyIsEnumerable('length'));
 }
 function isWindow( obj ) {
 	return obj != null && obj === obj.window;
@@ -133,7 +137,7 @@ function extend(){
 
 module.exports = {
 	isFunction: isFunction,
-	isArray: Array.isArray || isArray,
+	isArray: isArray,
 	isWindow: isWindow,
 	isNumeric: isNumeric,
 	isEmptyObject: isEmptyObject,

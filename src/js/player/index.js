@@ -13,7 +13,8 @@ Player.prototype = {
 	constructor: Player,
 	init: function(options){
 		var self = this;
-		var container = options.container;
+		var container = options.renderer.container = options.control.container = options.container;
+		options.renderer.video = options.control.video = options.video;
 		
 		if(!Support.isSupport()){
 			Support.createMessage({
@@ -23,10 +24,10 @@ Player.prototype = {
 		}
 		
 		var renderer = new Renderer();
-		renderer.init(options);
+		renderer.init(options.renderer);
 		
-		options.renderer = renderer;
-		var control = new Control(options);
+		options.control.renderer = renderer;
+		var control = new Control(options.control);
 		
 		self.control = control;
 		self.renderer = renderer;

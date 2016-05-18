@@ -11,14 +11,17 @@
     <meta name="x5-fullscreen" content="true">
 	<title>video3d demo</title>
 	<link rel="stylesheet" href="css/video3d.min.css">
-	<script src="../libs/three/three.min.js"></script>
-	<!-- <script src="../libs/three/effects/VREffect.js"></script -->>
+	<script src="../libs/media/mediaelement.js"></script>
+	<script src="../libs/three/three.full.min.js"></script>
+	<!-- <script src="../libs/three/effects/VREffect.js"></script> -->
+	<!-- <script src="../../video3d-gh-pages/libs/zencoder/zencoder-haze.js?"></script> -->
 	<script src="js/video3d.js?id=3"></script>
 <style>
 *{ margin:0; padding:0; outline:none; }
 body { position: absolute; top:0; bottom:0; left:0; width:100%; }
 .video3d-container1{ position: absolute; top:10%; left:10%; width:80%; height: 80%;}
 .video3d-container{ position: absolute; top:0; left:0; width:100%; height: 100%;}
+.video3d-video1 { position: absolute; top: 0; width: 1px; height: 1px; z-index: -100;}
 
 .btn-play { 
 	position: absolute; top: 50%; left: 50%; margin: -61px 0 0 -25px; width: 50px; height: 50px; 
@@ -87,22 +90,34 @@ body { position: absolute; top:0; bottom:0; left:0; width:100%; }
 	function onload(){
 		msg = document.getElementById('msg');
 		text = '';
+		url = '';
+		url = '../assets/video/gliding1/gliding1.m3u8';
+		//url = '../assets/video/960p.mp4';
 		try{
 			document.body.addEventListener('touchstart', function(){ /*just for make :active active */ });
 			document.addEventListener('touchmove', function(e){ /*fix window */ e.preventDefault(); });
 		
 			player = new video3d({
 				container: document.getElementById('playerContainer'),
+				appendVideo: true,
 				videoSources: [
-					{ type:'video/mp4', src: '../assets/video/960p.mp4' }
+					//video/mp2t; codecs="avc1.42E01E,mp4a.40.2"
+					//{ type:'video/mp2t; codecs="avc1.42E01E,mp4a.40.2"', src: '../assets/video/gliding1/gliding1.m3u8' }, //application/x-mpegURL  application/vnd.apple.mpegurl
+					{ type:'video/m3u8', src: '../assets/video/gliding1/gliding1.m3u8' }, //application/x-mpegURL  application/vnd.apple.mpegurl
+					//{ type:'video/mp4', src: '../assets/video/960p.mp4' }
+					//{  src: '../assets/video/gliding1/gliding1.mp4' },
 				],
 				control: {
 					//btnVolume: false
 				},
 				renderer: {
 					definition: 1,
+					needEnoughData: false
 				}
 			});
+			
+			initVideo(player.video);
+			initVideoStream(player.video, url);
 			
 			var interval = setInterval(function(){
 				text = player.video.readyState + '; orientation: '+ window.orientation;
@@ -111,7 +126,7 @@ body { position: absolute; top:0; bottom:0; left:0; width:100%; }
 				var deviceStatus = player.player.renderer.getDeviceStatus();
 				var orientationParam = deviceStatus.orientation;
 				var motionParam = deviceStatus.motion;
-				if(orientationParam&&orientationParam.alpha!==null){
+				if(false&&orientationParam&&orientationParam.alpha!==null){
 					text += '\n alpha: '+orientationParam.alpha
 						+'\n beta: '+orientationParam.beta
 						+'\n gamma: '+orientationParam.gamma
@@ -155,6 +170,61 @@ body { position: absolute; top:0; bottom:0; left:0; width:100%; }
 			//text = player.util.collection.objToStr(screen);
 			msg.innerHTML = text;
 			console.error(e);
+		}
+	}
+	
+	function initVideo(video){
+		video.src = 'http://www.91holy.com/github/video3d/assets/video/gliding1/gliding1.m3u8';
+		video.type = 'video/m3u8';
+		MediaElement(video, {
+			success: function(me) {
+				mediaElement = me;
+				me.play();
+				//
+				//me.addEventListener('timeupdate', function() {
+				//	document.getElementById('time').innerHTML = me.currentTime;
+				//}, false);
+				//
+				//document.getElementById('pp')['onclick'] = function() {
+				//	if (me.paused)
+				//		me.play();
+				//	else
+				//		me.pause();
+				//};
+			},
+			error: function(result){
+				console.error(result);
+			}
+		});
+	}
+	
+	function initVideoStream(video, src){
+		var url = 'http://www.91holy.com/github/video3d/assets/video/gliding1/gliding1.m3u8';
+		// url = 'http://www.91holy.com/github/video3d/assets/video/960p.mp4';
+		url = url.replace('.m3u8','-00001.ts');
+		if(src){
+			return;
+			xhr = player.util.xhr.ajax({
+				url: url,
+				//contentType: 'application/vnd.apple.mpegurl',  // 'video/mp4'
+				responseType: 'blob',  //'arraybuffer' 'blob'
+				type: 'get',
+				success: function(result){
+					//buffer = new Uint8Array(result);
+					blob = new Blob([result], {type: 'video/mp4'});
+					sss = URL.createObjectURL(blob);
+					player.load(sss);
+					//player.load(hazeVideo);
+				}
+			});
+		
+		
+			//MediaSource.isTypeSupported('video/mp2t; codecs="avc1.42E01E,mp4a.40.2"');
+			src = src.replace('.m3u8','-00001.ts');
+			//player.load(src);
+			
+			//player.load(hazeVideo);
+			//player.load();
 		}
 	}
 </script>
