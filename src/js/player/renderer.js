@@ -28,7 +28,7 @@ var defaultOptions = {
 	useFullMotion: true,
 	useVirtualReality: false,
 	
-	needEnoughData: true,
+	needEnoughData: false,
 	definition: definitionType.low,
 	
 };
@@ -224,6 +224,7 @@ Renderer.prototype.init = function(options){
 	self.useDeviceMotion = useDeviceMotion;
 	self.useFullMotion = useFullMotion;
 	self.useVirtualReality = useVirtualReality;
+	self.needEnoughData = needEnoughData;
 	self.material = material;
 	
 	self.swipeAnimCoefX = 4;
@@ -545,10 +546,12 @@ Renderer.prototype.init = function(options){
 
 	function tick() {
 		if(!isStop){
-			if(!isPause && needEnoughData && self.video.readyState===video.HAVE_ENOUGH_DATA){
-				self.video.play();
-			}else{
-				self.video.pause();
+			if( needEnoughData ){
+				if(!isPause && self.video.readyState===video.HAVE_ENOUGH_DATA){
+					self.video.play();
+				}else{
+					self.video.pause();
+				}
 			}
 			
 			render();

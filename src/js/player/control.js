@@ -13,7 +13,7 @@ var displayHidden = variables.displayHidden;
 var dateHelper = util.date;
 
 var URL = window.URL;
-var MediaSource = window.MediaSource;
+var MediaSource = window.MediaSource||window.WebKitMediaSource;
 
 var name = 'control-';
 var meta = {
@@ -139,8 +139,8 @@ Control.prototype = {
 		
 		dom.addAttribute(video,'loop', loop);
 		dom.addAttribute(video,'autoplay', autoplay);
-		video.load(); // must call after setting/changing source
 		
+		video.load(); // must call after setting/changing source
 		self.play();
 		self.pause();
 		if(autoplay){
@@ -265,7 +265,7 @@ Control.prototype = {
 			e.preventDefault();
 			var files = e.dataTransfer.files;
 			var file = files[0];
-			var src = window.URL.createObjectURL(file);
+			var src = URL.createObjectURL(file);
 			loadVideo(src);
 		}
 		

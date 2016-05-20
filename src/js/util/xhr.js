@@ -13,9 +13,9 @@ var XMLHttpRequest = window.XMLHttpRequest;
 var ActiveXObject = window.ActiveXObject;
 var FileReader = window.FileReader;
 
-var xhr = {};
+var xhrUtil = {};
 
-xhr.ajax = function(param){
+xhrUtil.ajax = function(param){
 	param = param||{};
 	param.type = param.type||'get';  //'get' 'post'
 	param.async = param.async||true;
@@ -90,55 +90,57 @@ xhr.ajax = function(param){
 		}
 		if( typeof param.complete === 'function')param.complete(xhr);
 	};
+	
 	if( typeof param.beforeSend === 'function')param.beforeSend(xhr);
-	if( param.contentType !== undefined )xhr.setRequestHeader("Content-Type", param.contentType);
+	if( param.contentType === 'string' )xhr.setRequestHeader("Content-Type", param.contentType);
 	if( typeof param.timeout === 'number' ){
 		xhr.timeout = param.timeout;
 		if( typeof param.ontimeout === 'function' ) xhr.ontimeout = param.ontimeout;
 	}
 	if( typeof param.progress === 'function')xhr.upload.onprogress = param.progress;
-	if( typeof param.responseType !== undefined )xhr.responseType = param.responseType;
+	if( typeof param.responseType === 'string' )xhr.responseType = param.responseType;
 	xhr.send(fd);
-	return xhr;
 	
-	function FormDataShim(xhr){
-		var o = this;
-		var parts = [];// Data to be sent
-        var boundary = new Array(5).join('-') + (+new Date() * (1e16*Math.random())).toString(32);
-		var oldSend = XMLHttpRequest.prototype.send;
-		
-		this.append = function (name, value, filename) {
-			parts.push('--' + boundary + '\r\nContent-Disposition: form-data; name="' + name + '"');
-			if (value instanceof Blob) {
-				parts.push('; filename="'+ (filename || 'blob') +'"\r\nContent-Type: ' + value.type + '\r\n\r\n');
-				parts.push(value);
-			} else {
-				parts.push('\r\n\r\n' + value);
-			}
-			parts.push('\r\n');
-	    };
- 
-	    // Override XHR send()
-	    xhr.send = function (val) {
-	        var fr,data,oXHR = this;
-	        if (val === o) {
-	            //注意不能漏最后的\r\n ,否则有可能服务器解析不到参数.
-	            parts.push('--' + boundary + '--\r\n');
-	            data = new blob.XBlob(parts);
-	            fr = new FileReader();
-	            fr.onload = function () { oldSend.call(oXHR, fr.result); };
-	            fr.onerror = function (err) { throw err; };
-	            fr.readAsArrayBuffer(data);
-	 
-	            this.setRequestHeader('Content-Type', 'multipart/form-data; boundary=' + boundary);
-	            XMLHttpRequest.prototype.send = oldSend;
-	        }
-	        else {
-	        	oldSend.call(this, val);
-	        }
-	    };
-	}
+	return xhr;
 };
 
+//must out side for wechat in min.js
+function FormDataShim(xhr){
+	var o = this;
+	var parts = [];// Data to be sent
+    var boundary = new Array(5).join('-') + (+new Date() * (1e16*Math.random())).toString(32);
+	var oldSend = XMLHttpRequest.prototype.send;
+	
+	this.append = function (name, value, filename) {
+		parts.push('--' + boundary + '\r\nContent-Disposition: form-data; name="' + name + '"');
+		if (value instanceof Blob) {
+			parts.push('; filename="'+ (filename || 'blob') +'"\r\nContent-Type: ' + value.type + '\r\n\r\n');
+			parts.push(value);
+		} else {
+			parts.push('\r\n\r\n' + value);
+		}
+		parts.push('\r\n');
+    };
 
-module.exports = xhr;
+    // Override XHR send()
+    xhr.send = function (val) {
+        var fr,data,oXHR = this;
+        if (val === o) {
+            //注意不能漏最后的\r\n ,否则有可能服务器解析不到参数.
+            parts.push('--' + boundary + '--\r\n');
+            data = new blob.XBlob(parts);
+            fr = new FileReader();
+            fr.onload = function () { oldSend.call(oXHR, fr.result); };
+            fr.onerror = function (err) { throw err; };
+            fr.readAsArrayBuffer(data);
+ 
+            this.setRequestHeader('Content-Type', 'multipart/form-data; boundary=' + boundary);
+            XMLHttpRequest.prototype.send = oldSend;
+        }
+        else {
+        	oldSend.call(this, val);
+        }
+    };
+}
+
+module.exports = xhrUtil;

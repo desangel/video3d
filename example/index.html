@@ -11,8 +11,10 @@
     <meta name="x5-fullscreen" content="true">
 	<title>video3d demo</title>
 	<link rel="stylesheet" href="css/video3d.min.css">
-	<script src="../libs/media/mediaelement.js"></script>
-	<script src="../libs/three/three.full.min.js"></script>
+	<script src="../libs/three/three.min.js"></script>
+	<script src="../libs/hls/hls.js"></script>
+	<!-- <script src="../libs/jquery/jquery.min.js"></script> -->
+	<!-- <script src="../libs/media/mediaelement-and-player.js"></script> -->
 	<!-- <script src="../libs/three/effects/VREffect.js"></script> -->
 	<!-- <script src="../../video3d-gh-pages/libs/zencoder/zencoder-haze.js?"></script> -->
 	<script src="js/video3d.js?id=3"></script>
@@ -87,7 +89,12 @@ body { position: absolute; top:0; bottom:0; left:0; width:100%; }
 .video3d-control-btn-fullscreen:active:not(:disabled){ color: #666; background-color: #fff; }
 */
 
+	urlParam = getUrlParam();
+	
+	
+	
 	function onload(){
+		
 		msg = document.getElementById('msg');
 		text = '';
 		url = '';
@@ -103,7 +110,7 @@ body { position: absolute; top:0; bottom:0; left:0; width:100%; }
 				videoSources: [
 					//video/mp2t; codecs="avc1.42E01E,mp4a.40.2"
 					//{ type:'video/mp2t; codecs="avc1.42E01E,mp4a.40.2"', src: '../assets/video/gliding1/gliding1.m3u8' }, //application/x-mpegURL  application/vnd.apple.mpegurl
-					{ type:'video/m3u8', src: '../assets/video/gliding1/gliding1.m3u8' }, //application/x-mpegURL  application/vnd.apple.mpegurl
+					//{ type:'application/x-mpegURL', src: '../assets/video/gliding1/gliding1.m3u8' }, //application/x-mpegURL  application/vnd.apple.mpegurl
 					//{ type:'video/mp4', src: '../assets/video/960p.mp4' }
 					//{  src: '../assets/video/gliding1/gliding1.mp4' },
 				],
@@ -116,7 +123,10 @@ body { position: absolute; top:0; bottom:0; left:0; width:100%; }
 				}
 			});
 			
-			initVideo(player.video);
+			initHls(player.video);
+			initFmp4(player.video);
+			initMediaVideo(player.video);
+			initMediaElement(player.video);
 			initVideoStream(player.video, url);
 			
 			var interval = setInterval(function(){
@@ -169,35 +179,314 @@ body { position: absolute; top:0; bottom:0; left:0; width:100%; }
 			text = e.toString();
 			//text = player.util.collection.objToStr(screen);
 			msg.innerHTML = text;
+			msg.innerHTML += getWindowApi('media');
 			console.error(e);
 		}
 	}
 	
-	function initVideo(video){
-		video.src = 'http://www.91holy.com/github/video3d/assets/video/gliding1/gliding1.m3u8';
-		video.type = 'video/m3u8';
-		MediaElement(video, {
+	function initFile(video){
+		var url = '../../video3d-gh-pages/assets/video/gliding1/gliding1.m3u8';
+		var reader = new FileReader();
+		reader.onload = function(e){
+			video.src = URL.createObjectURL(file);
+		};
+		reader.readAsDataURL(url); 
+		
+	}
+	
+	//ok except in ios
+	var hls;
+	var hlsParam = {
+		autoRecoverError: true,
+		enableStreaming: true,
+		enableWorker: true,
+		levelCapping: -1,
+		defaultAudioCodec: undefined
+	};
+	function initHls(video){
+		return;
+		var url = 'http://www.91holy.com/github/video3d/assets/video/gliding1/gliding1.m3u8';
+		url = '../../video3d-gh-pages/assets/video/gliding1/gliding1.m3u8';
+		
+		loadStream(video, url);
+	}
+	
+	function loadStream(video, url){
+		//var MediaSource = window.MediaSource||window.WebKitMediaSource; ios not support MediaSource
+		
+		hls = new Hls();
+		hls.loadSource(url);
+		hls.attachMedia(video);
+		hls.on(Hls.Events.MANIFEST_PARSED,function() {
+			player.play();
+		});
+	}
+	
+	function loadStream1(video, url){
+		if(Hls.isSupported()) {
+			if(hls) {
+				hls.destroy();
+				if(hls.bufferTimer) {
+					clearInterval(hls.bufferTimer);
+					hls.bufferTimer = undefined;
+				}
+				hls = null;
+			}
+			var levelCapping = hlsParam.levelCapping;
+			var enableWorker = hlsParam.enableWorker;
+			var defaultAudioCodec = hlsParam.defaultAudioCodec;
+			
+			
+			hls = new Hls({debug:true, enableWorker : enableWorker, defaultAudioCodec : defaultAudioCodec});
+			hls.loadSource(url);
+			hls.autoLevelCapping = levelCapping;
+			hls.attachMedia(video);
+		}
+	}
+	
+	
+	//obsolte
+	function initFmp4(video){
+		return;
+		var url = 'http://www.91holy.com/github/video3d/assets/video/960p.mp4';
+		var MediaSource = window.MediaSource||window.WebKitMediaSource;
+		mediaSource = new MediaSource();
+		mediaSource.addEventListener('sourceopen', onSourceOpen.bind(this, video));
+		video.src = window.URL.createObjectURL(mediaSource);
+		
+		function GetInitializationSegment(){
+		
+		}
+		
+		function HaveMoreMediaSegments(){
+		
+		}
+		
+		function onSourceOpen(videoTag, e) {
+			var mediaSource = e.target;
+			
+			if (mediaSource.sourceBuffers.length > 0)
+				return;
+			
+			var sourceBuffer = mediaSource.addSourceBuffer('video/mp4;codecs="avc1.42E01E,mp4a.40.2"');  //'video/webm; codecs="vorbis,vp8"'
+			
+			videoTag.addEventListener('seeking', onSeeking.bind(videoTag, mediaSource));
+			videoTag.addEventListener('progress', onProgress.bind(videoTag, mediaSource));
+			
+			var initSegment = GetInitializationSegment();
+			
+			if (initSegment == null) {
+				// Error fetching the initialization segment. Signal end of stream with an error.
+				mediaSource.endOfStream("network");
+				return;
+			}
+
+			// Append the initialization segment.
+			var firstAppendHandler = function(e) {
+				var sourceBuffer = e.target;
+				sourceBuffer.removeEventListener('updateend', firstAppendHandler);
+				
+				// Append some initial media data.
+				appendNextMediaSegment(mediaSource);
+			};
+			sourceBuffer.addEventListener('updateend', firstAppendHandler);
+			sourceBuffer.appendBuffer(initSegment);
+		}
+
+		function appendNextMediaSegment(mediaSource) {
+			if (mediaSource.readyState == "closed")
+				return;
+			
+			// If we have run out of stream data, then signal end of stream.
+			if (!HaveMoreMediaSegments()) {
+				mediaSource.endOfStream();
+				return;
+			}
+			
+			// Make sure the previous append is not still pending.
+			if (mediaSource.sourceBuffers[0].updating)
+				return;
+			
+			var mediaSegment = GetNextMediaSegment();
+			
+			if (!mediaSegment) {
+				// Error fetching the next media segment.
+				mediaSource.endOfStream("network");
+				return;
+			}
+			
+			// NOTE: If mediaSource.readyState == “ended”, this appendBuffer() call will
+			// cause mediaSource.readyState to transition to "open". The web application
+			// should be prepared to handle multiple “sourceopen” events.
+			mediaSource.sourceBuffers[0].appendBuffer(mediaSegment);
+		}
+
+		function onSeeking(mediaSource, e) {
+			var video = e.target;
+			
+			if (mediaSource.readyState == "open") {
+				// Abort current segment append.
+				mediaSource.sourceBuffers[0].abort();
+			}
+			
+			// Notify the media segment loading code to start fetching data at the
+			// new playback position.
+			SeekToMediaSegmentAt(video.currentTime);
+			
+			// Append a media segment from the new playback position.
+			appendNextMediaSegment(mediaSource);
+		}
+
+		function onProgress(mediaSource, e) {
+			appendNextMediaSegment(mediaSource);
+		}
+	
+	}
+	
+	//obsolte
+	function initMediaVideo(video){
+		return;
+		
+		//var isTypeSupported = MediaSource.isTypeSupported('video/mp2t;codecs="avc1.42E01E,mp4a.40.2"');
+		//console.log(isTypeSupported);
+		
+		var url = 'http://www.91holy.com/github/video3d/assets/video/gliding1/gliding1.m3u8';
+		
+		videoSegments = [];
+		audioSegments = [];
+		videoSegments1 = [];
+		audioSegments1 = [];
+		videoBuffer = null;
+		audioBuffer = null;
+		ransmuxer = new player.media.mp2t.Transmuxer();
+		mediaSource = new MediaSource();
+		ransmuxer.on('data', function(segment){
+			if (segment.type === 'video') {
+				videoSegments.push(segment);
+				videoSegments1.push(segment);
+				if(!videoBuffer.updating)videoBuffer.appendBuffer(videoSegments.shift().data);
+			} else {
+				audioSegments.push(segment);
+				audioSegments1.push(segment);
+				if(!audioBuffer.updating)audioBuffer.appendBuffer(audioSegments.shift().data);
+			}
+		});
+		
+		mediaSource.addEventListener('sourceopen', function() {
+			//videoBuffer = mediaSource.addSourceBuffer('video/mp4;codecs="avc1.42E01E,mp4a.40.2"');
+			videoBuffer = mediaSource.addSourceBuffer('video/mp4;codecs=avc1.4d400d');
+			audioBuffer = mediaSource.addSourceBuffer('audio/mp4;codecs=mp4a.40.2');
+			
+			videoBuffer.addEventListener('updateend', function(e) {
+				if (videoSegments.length) {
+					//mediaSource.sourceBuffers[0].appendBuffer(buffer);
+					videoBuffer.appendBuffer(videoSegments.shift().data);
+				}
+			});
+			
+			audioBuffer.addEventListener('updateend', function() {
+				if (audioSegments.length) {
+					audioBuffer.appendBuffer(audioSegments.shift().data);
+				}
+			});
+		});
+		
+		
+		mediaSource.addEventListener('error', function(e){ console.log(e); });
+		mediaSource.addEventListener('sourceended', function(e){ console.log("source ended!"); });
+		mediaSource.addEventListener('sourceclose', function(e){ console.log("source close!"); });
+		
+		
+		requestPlaylist(url, function(duration, srcSegments){
+			mediaSource.duration = duration;
+			startRequestPlaySegment(srcSegments);
+		});
+		
+		player.load(URL.createObjectURL(mediaSource));
+	}
+	
+	function startRequestPlaySegment(srcSegments){
+		if(srcSegments.length){
+			requestPlaySegment(srcSegments.shift().url, function(buffer){
+				ransmuxer.push(buffer);
+				//startRequestPlaySegment(srcSegments);
+			});
+		}else{
+			ransmuxer.end();
+		}
+	}
+	
+	function VideoSegment(path, name, duration){
+		this.path = path;
+		this.name = name;
+		this.duration = duration;
+		this.url = path+name;
+		this.buffer = null;
+	}
+	
+	function requestPlaylist(url, callback){
+		var path = url.substr(0, url.lastIndexOf('/')+1);
+		player.util.xhr.ajax({
+			url: url,
+			//responseType: 'blob',  //'arraybuffer' 'blob'
+			type: 'get',
+			success: function(result){
+				var results = result.split('\n');
+				var sign = '#EXTINF';
+				var totalDuration = 0;
+				var videoSegments = [];
+				for(var i in results){
+					if(results[i].indexOf(sign)===0){
+						var duration = parseFloat(results[i].substr(sign.length).replace(':','').replace(',','').trim());
+						var segmentName = results[++i];
+						videoSegments.push(new VideoSegment(path, segmentName, duration));
+						totalDuration+=duration;
+					}
+				}
+				callback(totalDuration, videoSegments);
+			}
+		});
+	}
+	
+	function requestPlaySegment(url, callback){
+		player.util.xhr.ajax({
+			url: url,
+			responseType: 'arraybuffer',  //'arraybuffer' 'blob'
+			type: 'get',
+			success: function(result){
+				var buffer = new Uint8Array(result);
+				callback(buffer);
+			}
+		});
+	
+	}
+	
+	//obsolte
+	function initMediaElement(video){
+		return;
+		var url = 'http://www.91holy.com/github/video3d/assets/video/gliding1/gliding1.m3u8';
+		url = '../assets/video/960p.mp4';
+		video.src = url;
+		//video.type = 'video/m3u8';
+		mediaElement = MediaElement(video, {
 			success: function(me) {
-				mediaElement = me;
-				me.play();
-				//
-				//me.addEventListener('timeupdate', function() {
-				//	document.getElementById('time').innerHTML = me.currentTime;
-				//}, false);
-				//
-				//document.getElementById('pp')['onclick'] = function() {
-				//	if (me.paused)
-				//		me.play();
-				//	else
-				//		me.pause();
-				//};
+				//player.play();
 			},
 			error: function(result){
 				console.error(result);
 			}
 		});
+		
+		//mediaElementPlayer = new MediaElementPlayer(video, {
+		//	//loop: true,
+		//	clickToPlayPause: false,
+		//	success: function (media, ele, mediaElementPlayer) {
+		//		player.play();
+		//	}
+		//});
 	}
 	
+	////obsolte
 	function initVideoStream(video, src){
 		var url = 'http://www.91holy.com/github/video3d/assets/video/gliding1/gliding1.m3u8';
 		// url = 'http://www.91holy.com/github/video3d/assets/video/960p.mp4';
@@ -226,6 +515,39 @@ body { position: absolute; top:0; bottom:0; left:0; width:100%; }
 			//player.load(hazeVideo);
 			//player.load();
 		}
+	}
+	
+	function getUrlParam(){
+		var result;
+		var search = location.search;
+		if(search.length){
+			var sharpIndex = search.lastIndexOf('#');
+			var paramsStr;
+			if(sharpIndex<0){
+				paramsStr = search.substring(1);
+			}else{
+				paramsStr = search.substring(1, sharpIndex);
+			}
+			result = {};
+			var paramsArray = paramsStr.split('&');
+			for(var i in paramsArray){
+				var paramStr = paramsArray[i];
+				var paramArray = paramStr.split('=');
+				result[paramArray[0]] = paramArray[1];
+			}
+		}
+		return result;
+	}
+	
+	function getWindowApi(key){
+		var reg = new RegExp(key, 'ig');
+		var result = '';
+		for(var name in window){
+			if(reg.exec(name)){
+				result+= name + ': '+window[name].toString()+'\n';
+			}
+		}
+		return result;
 	}
 </script>
 </head>
