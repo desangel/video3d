@@ -2,6 +2,8 @@
 /* jshint node: true */
 "use strict";
 
+var version = '1.0.0';
+
 var variables = require('./variables');
 var util = require('./util');
 var dom = require('./html');
@@ -41,7 +43,7 @@ Video3d.prototype = {
 			container = document.querySelector(container);
 		}else if(container == null){
 			container = document.createElement('div');
-			document.body.appendChild(container);
+			//document.body.appendChild(container);
 		}
 		container.classList.add(meta.className.container);
 		
@@ -90,6 +92,16 @@ Video3d.prototype = {
 	}
 };
 
+Video3d.version = version;
+Video3d.isSupport = function(){
+	var result = true;
+	try{
+		new Video3d();
+	}catch(e){
+		result = false;
+	}
+	return result;
+};
 
 module.exports = Video3d;
 global.video3d = Video3d;

@@ -17,7 +17,8 @@
 	<!-- <script src="../libs/media/mediaelement-and-player.js"></script> -->
 	<!-- <script src="../libs/three/effects/VREffect.js"></script> -->
 	<!-- <script src="../../video3d-gh-pages/libs/zencoder/zencoder-haze.js?"></script> -->
-	<script src="js/video3d.js?id=3"></script>
+	<script src="js/video3d.min.js?id=3"></script>
+	<!-- <script>try{document.write('<script src="js/video3d.js?id=3"><\/script>');}catch(e){alert(e);}</script> -->
 <style>
 *{ margin:0; padding:0; outline:none; }
 body { position: absolute; top:0; bottom:0; left:0; width:100%; }
@@ -39,91 +40,58 @@ body { position: absolute; top:0; bottom:0; left:0; width:100%; }
  
  .msgContainer{ position:fixed; z-index: 10; top:0; left;0; width: 100%; font-size: 16px; color: #efefef; white-space: pre-wrap; }
  .msg { 
+	overflow: auto;
 	-webkit-overflow-scrolling:touch;
  }
 </style>
-<script>
-/*  use for test
-.video3d-renderer{ position: absolute; top:0; bottom:36px; left:0; width:100%;}
-.video3d-control{ position:absolute; bottom: 0; left:0; width: 100%; height:36px;  background-color: rgba(31,31,31,0.8); }
-.video3d-control:after { content:" "; display:block; height:0; visibility:hidden; clear:both; }
-.video3d-control-scroll{ position:absolute; top:-10px; left:0; width: 100%; height:10px; }
-.video3d-control-scroll-touch{ position:absolute; z-index:3; bottom:0; width: 100%; height: 200%; }
-.video3d-control-scroll-pointer{ position:absolute; z-index:4; top0; left:0; margin:-4px 0 0 -9px; width: 18px; height: 18px; background: url(css/icons/spointer.png) no-repeat center; background-size: 100%; }
-.video3d-control-scroll-bg{ width: 100%; height: 100%; background: #3A3A3A; }
-.video3d-control-scroll-bg1{ position:absolute; z-index:1; top:0; left:0; width: 0; height: 100%; background: #efefef; }
-.video3d-control-scroll-bg2{ position:absolute; z-index:2; top:0; left:0; width: 0; height: 100%; background: #3B8BC4; }
-.video3d-control-btn-play,
-.video3d-control-btn-volume,
-.video3d-control-btn-drag,
-.video3d-control-btn-fullscreen{
-	color: #fff; text-align: center; vertical-align: top;  white-space: nowrap;  word-break:break-all;
-	/* background-color: #929292; 1background-clip: padding-box; 1border: 1px solid #ccc; 1border-radius: 3px; 1-webkit-appearance: button; /
-	background-clip: padding-box; border: none; -webkit-appearance: none; 
-	box-sizing: border-box;  
-	cursor: pointer;-webkit-transition: all; -webkit-transition-timing-function: linear; -webkit-transition-duration: .2s; 
- 	transition: all; transition-timing-function: linear; transition-duration: .2s; 
-}
-.video3d-control-btn-play,
-.video3d-control-btn-volume,
-.video3d-control-btn-drag,
-.video3d-control-btn-fullscreen,
-.video3d-control-txt-time
-{ width: 48px; height:100%; background: no-repeat center; background-size: 32px 32px; }
-.video3d-control-btn-play{ float:left; background-image: url(css/icons/vplay.png); border-right: 1px solid #3A3A3A;}
-.video3d-control-btn-play[pause]{  background-image: url(css/icons/vstop.png); }
-.video3d-control-btn-volume{ float: right; border-left: 1px solid #3A3A3A;}
-.video3d-control-btn-volume[volume="0"]{  background-image: url(css/icons/volume0.png);}
-.video3d-control-btn-volume[volume="1"]{  background-image: url(css/icons/volume1.png);}
-.video3d-control-btn-volume[volume="2"]{  background-image: url(css/icons/volume2.png);}
-.video3d-control-btn-volume[volume="3"]{  background-image: url(css/icons/volume3.png);}
-.video3d-control-btn-drag{ float: right; border-left: 1px solid #3A3A3A;}
-.video3d-control-btn-drag[drag_type="touch"]{ background-image: url(css/icons/vdrag2.png);}
-.video3d-control-btn-drag[drag_type="motion"]{ background-image: url(css/icons/vdrag1.png);}
-.video3d-control-btn-fullscreen{ float: right; background-image: url(css/icons/vfullscreen1.png); border-left: 1px solid #3A3A3A;}
-.video3d-control-txt-time{ float: left; width:auto; line-height: 36px; }
-
-
-.video3d-control-btn-play:active:not(:disabled),
-.video3d-control-btn-volume:active:not(:disabled),
-.video3d-control-btn-fullscreen:active:not(:disabled){ color: #666; background-color: #fff; }
-*/
-
+<script>	
 	urlParam = getUrlParam();
 	
-	
-	
 	function onload(){
-		
+		testApi();
+	
+		//console.log('video3d is support: '+ video3d.isSupport());
 		msg = document.getElementById('msg');
 		text = '';
 		url = '';
 		url = '../assets/video/gliding1/gliding1.m3u8';
 		//url = '../assets/video/960p.mp4';
 		try{
+			var container = document.getElementById('playerContainer');
+			//alert(container.__proto__.__proto__.__proto__.__proto__.__proto__.constructor);
+			//alert(Node.prototype);
+			//document.createEvent("TouchEvent");
 			document.body.addEventListener('touchstart', function(){ /*just for make :active active */ });
 			document.addEventListener('touchmove', function(e){ /*fix window */ e.preventDefault(); });
 		
 			player = new video3d({
-				container: document.getElementById('playerContainer'),
+				container: container,
 				appendVideo: true,
 				videoSources: [
 					//video/mp2t; codecs="avc1.42E01E,mp4a.40.2"
 					//{ type:'video/mp2t; codecs="avc1.42E01E,mp4a.40.2"', src: '../assets/video/gliding1/gliding1.m3u8' }, //application/x-mpegURL  application/vnd.apple.mpegurl
 					//{ type:'application/x-mpegURL', src: '../assets/video/gliding1/gliding1.m3u8' }, //application/x-mpegURL  application/vnd.apple.mpegurl
-					//{ type:'video/mp4', src: '../assets/video/960p.mp4' }
 					//{  src: '../assets/video/gliding1/gliding1.mp4' },
+					{ type:'video/mp4', src: '../assets/video/960p.mp4' },
+					{  src: 'http://www.91holy.com/github/video3d/assets/video/gliding1/gliding1.m3u8' },
+					{  type:'video/mp4', src: 'rtmpt://ls.17wsp.com/kuaitv/vr' },
+					{  src: 'http://ls.17wsp.com/kuaitv/vr.m3u8' },
 				],
 				control: {
+					isFloat: false,
+					floatingElements: [
+						document.querySelector('.msgContainer')
+					]
 					//btnVolume: false
 				},
 				renderer: {
 					definition: 1,
-					needEnoughData: false
+					needEnoughData: false,
+					//textureType: 'canvas'
 				}
 			});
 			
-			initHls(player.video);
+			//initHls(player.video);  //no MediaSource not supported by ios
 			initFmp4(player.video);
 			initMediaVideo(player.video);
 			initMediaElement(player.video);
@@ -179,7 +147,7 @@ body { position: absolute; top:0; bottom:0; left:0; width:100%; }
 			text = e.toString();
 			//text = player.util.collection.objToStr(screen);
 			msg.innerHTML = text;
-			msg.innerHTML += getWindowApi('media');
+			//msg.innerHTML += getWindowApi('media');
 			console.error(e);
 		}
 	}
@@ -204,10 +172,12 @@ body { position: absolute; top:0; bottom:0; left:0; width:100%; }
 		defaultAudioCodec: undefined
 	};
 	function initHls(video){
-		return;
+		//return;
 		var url = 'http://www.91holy.com/github/video3d/assets/video/gliding1/gliding1.m3u8';
 		url = '../../video3d-gh-pages/assets/video/gliding1/gliding1.m3u8';
-		
+		url = 'http://ls.17wsp.com/kuaitv/vr.m3u8';
+		url = video.currentSrc;
+		console.log(url);
 		loadStream(video, url);
 	}
 	
@@ -539,15 +509,67 @@ body { position: absolute; top:0; bottom:0; left:0; width:100%; }
 		return result;
 	}
 	
-	function getWindowApi(key){
+	function getWindowApi(key, obj){
+		var obj = obj||window;
 		var reg = new RegExp(key, 'ig');
-		var result = '';
-		for(var name in window){
+		var result = [];
+		var arr = [];
+		var properties;
+		//properties = Object.keys(obj);
+		properties = Object.getOwnPropertyNames(obj);
+		for(var i in properties){
+			var name = properties[i];
 			if(reg.exec(name)){
-				result+= name + ': '+window[name].toString()+'\n';
+				arr.push({
+					name: name,
+					value: obj[name],
+					valid: obj[name]!==undefined,
+					val: function(){
+						var value = this.value;
+						if(typeof value === 'function'){
+							return 'function';
+						}else{
+							return value;
+						}
+						
+					}
+				});
 			}
 		}
+		arr.sort(function(obj1, obj2){
+			return (obj1.name < obj2.name)?-1:(obj1.name == obj2.name)?0:1;
+		});
+		for(var i in arr){
+			var output = arr[i];
+			result.push(output.name + ': '+output.val());
+		}
 		return result;
+	}
+	
+	function testApi(){
+		return;
+		var result = [];
+		try{
+			var obj = {};
+			obj.getUserMedia = (navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia || navigator.msGetUserMedia);
+			obj.mediaDevices = navigator.mediaDevices;
+			//obj.getUserMedia2 = (navigator.mediaDevices.getUserMedia || navigator.mediaDevices.webkitGetUserMedia || navigator.mediaDevices.mozGetUserMedia || navigator.mediaDevices.msGetUserMedia);
+			obj.MediaSource = (window.MediaSource||window.WebKitMediaSource);
+			obj.EventTarget = (window.EventTarget||window.WebKitEventTarget);
+			for(var name in obj){
+				result.push(name + ': '+obj[name]);
+			}
+			result = getWindowApi('',Node.prototype); //webkit|media element|node
+		}catch(e){
+			alert(e.message);
+		}
+		var num = 70;
+		for(var i = 0; i<result.length/num; i++){
+			var startIndex = i*70;
+			var endIndex = (i+1)*70;
+			var a = result.slice(startIndex, endIndex);
+			alert(a.join('\n'));
+		}
 	}
 </script>
 </head>

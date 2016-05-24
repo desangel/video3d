@@ -1,6 +1,6 @@
 /* global window, document, THREE */
 "use strict";
-require('./requestAnimFrame');
+require('../hack');
 var variables = require('../variables');
 var util = require('../util');
 var html = require('../html');
@@ -30,8 +30,10 @@ var defaultOptions = {
 	
 	needEnoughData: false,
 	definition: definitionType.low,
-	
+	textureType: 'video'
 };
+
+var isInit = true;
 
 var VideoTexture = function ( video, mapping, wrapS, wrapT, magFilter, minFilter, format, type, anisotropy ) {
 	THREE.Texture.call( this, video, mapping, wrapS, wrapT, magFilter, minFilter, format, type, anisotropy );
@@ -43,16 +45,47 @@ var VideoTexture = function ( video, mapping, wrapS, wrapT, magFilter, minFilter
 	}
 	update();
 };
-
 VideoTexture.prototype = Object.create( THREE.Texture.prototype );
 VideoTexture.prototype.constructor = VideoTexture;
+
+var VideoCanvasTexture = function ( video, mapping, wrapS, wrapT, magFilter, minFilter, format, type, anisotropy ) {
+	var scope = this;
+	
+	var videoImage = document.createElement( 'canvas' );
+	var	videoWidth = video.videoWidth||0;
+	var	videoHeight = video.videoHeight||0;
+	videoImage.width = videoWidth;
+	videoImage.height = videoHeight;
+	
+	THREE.Texture.call( scope, videoImage, mapping, wrapS, wrapT, magFilter, minFilter, format, type, anisotropy );
+	videoImage = scope.image;
+	var ctx = videoImage.getContext('2d');
+	
+	function update() {
+		window.requestAnimFrame( update );
+		ctx.drawImage(video, 0, 0, ctx.canvas.width,ctx.canvas.height);
+		scope.needsUpdate = true;
+	}
+	update();
+	
+	scope.videoImageCtx = ctx;
+};
+VideoCanvasTexture.prototype = Object.create( THREE.Texture.prototype );
+VideoCanvasTexture.prototype.constructor = VideoCanvasTexture;
 
 function Renderer(){
 	
 }
 Renderer.prototype.loadVideo = function(video){
 	var self = this;
+	
 	self.createTexture(video);
+	// durationchange loadedmetadata
+	//video.addEventListener('durationchange', handleloadedmetadata, false);
+	//function handleloadedmetadata(){
+	//	
+	//}
+	//video.removeEventListener('durationchange', handleloadedmetadata);
 };
 Renderer.prototype.createTexture = function(video){
 	var self = this;
@@ -60,8 +93,11 @@ Renderer.prototype.createTexture = function(video){
 	var texture;
 	
 	//create video texture 
-	
-	texture = new VideoTexture( video );
+	if(self.textureType==='canvas'){
+		texture = new VideoCanvasTexture( video );
+	}else{
+		texture = new VideoTexture( video );
+	}
 	
 	texture.minFilter = THREE.LinearFilter;
 	texture.magFilter = THREE.LinearFilter;
@@ -87,7 +123,7 @@ Renderer.prototype.updateTexture = function(){
 };
 Renderer.prototype.init = function(options){
 	var self = this;
-	options = util.extend(options, defaultOptions);
+	options = util.extend({}, defaultOptions, options);
 	var outContainer = options.container;
 	var video = options.video;
 	var useTouch = options.useTouch;
@@ -96,6 +132,7 @@ Renderer.prototype.init = function(options){
 	var useVirtualReality =options.useVirtualReality;
 	var needEnoughData = options.needEnoughData;
 	var definition = options.definition;
+	self.textureType = options.textureType;
 	
 	var container = dom.createElement({
 		className: namespace+meta.className.container
@@ -182,10 +219,8 @@ Renderer.prototype.init = function(options){
 	container.appendChild( renderer.domElement );
 	//document.body.appendChild( renderer.domElement );
 
-	//
 	camera = new THREE.PerspectiveCamera( defaultFov, canvasWidth / canvasHeight, 1, 10000 );
 	
-	//
 	canvas.addEventListener( 'mousedown', onDocumentMouseDown, false );
 	canvas.addEventListener( 'mousemove', onDocumentMouseMove, false );
 	canvas.addEventListener( 'mouseup', onDocumentMouseUp, false );
@@ -219,6 +254,7 @@ Renderer.prototype.init = function(options){
 	self.stop = stop;
 	self.nextframe = nextframe;
 	
+	self.container = container;
 	self.video = video;
 	self.useTouch = useTouch;
 	self.useDeviceMotion = useDeviceMotion;
@@ -554,7 +590,7 @@ Renderer.prototype.init = function(options){
 				}
 			}
 			
-			render();
+			if(isInit)render();
 			window.requestAnimFrame( tick );
 			
 			if(typeof self.keyframe === 'function'){ self.keyframe(self); }

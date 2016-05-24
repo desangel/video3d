@@ -34,7 +34,14 @@
     bottom: 36px;
     left: 0;
 
+    overflow: hidden;
+
     width: 100%;
+}
+
+.video3d-renderer[floating]
+{
+    bottom: 0;
 }
 
 .video3d-control

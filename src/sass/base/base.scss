@@ -38,6 +38,11 @@ $control-btn-background-size: 32px 32px;
 	bottom: $control-height;
 	left:0;
 	width:100%;
+	overflow: hidden; //for scroll not disturb the window.innerWidth when on pc
+}
+
+.#{$namespace}-renderer[floating]{ 
+	bottom: 0;
 }
 
 // control

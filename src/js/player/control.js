@@ -1,6 +1,12 @@
 /* global window, document */
 "use strict";
-require('./requestFullScreen');
+var tween = require('tween');
+var CSSPlugin = require('tweenCSSPlugin').createjs.CSSPlugin;
+var createjs = tween.createjs;
+createjs.CSSPlugin = CSSPlugin;
+createjs.CSSPlugin.install(createjs.Tween);
+
+require('../hack');
 var variables = require('../variables');
 var html = require('../html');
 var util = require('../util');
@@ -13,7 +19,9 @@ var displayHidden = variables.displayHidden;
 var dateHelper = util.date;
 
 var URL = window.URL;
-var MediaSource = window.MediaSource||window.WebKitMediaSource;
+var MediaSource = window.MediaSource;
+var setTimeout = window.setTimeout;
+var clearTimeout = window.clearTimeout;
 
 var name = 'control-';
 var meta = {
@@ -38,6 +46,8 @@ var meta = {
 };
 
 var defaultControlOptions = {
+	floating: true,   //whether control bar is floating on the renderer
+	floatingElements: [], //outside element
 	autoplay: false,
 	loop: false,
 	scroll: true,
@@ -60,13 +70,15 @@ Control.prototype = {
 		var container = options.container;
 		var video = options.video;
 		var renderer = options.renderer;
-		var controlOptions = util.extend({}, defaultControlOptions, options.control);
+		var controlOptions = util.extend({}, defaultControlOptions, options);
 		var autoplay = controlOptions.autoplay;
 		var loop = controlOptions.loop;
 		var dragFile = controlOptions.dragFile;
+		var floating = controlOptions.floating;
+		self.floatingElements = controlOptions.floatingElements;
 		
 		video.setAttribute('webkit-playsinline','');  //行内播放
-		video.setAttribute('preload','');  //行内播放
+		video.setAttribute('preload','');
 		
 		renderer.keyframe = function(){
 			self.keyframe();
@@ -126,6 +138,7 @@ Control.prototype = {
 		self.container = container;
 		self.video = video;
 		self.renderer = renderer;
+		self.controlContainer = controlContainer;
 		self.scroll = scroll;
 		self.scrollPointer = scrollPointer;
 		self.scrollBg1 = scrollBg1;
@@ -178,9 +191,27 @@ Control.prototype = {
 			self.renderVolume();
 		});
 		
+		var controlShowAnimTick;
+		if(floating){
+			renderer.container.setAttribute('floating', '');
+			renderer.container.addEventListener('click', function(){
+				if(controlContainer.isShowing||controlContainer.isHidding)return;
+				if(controlShowAnimTick)clearTimeout(controlShowAnimTick);
+				if(!self.isHidden()){
+					self.hide();
+				}else{
+					self.show();
+					controlShowAnimTick = setTimeout(function(){
+						self.hide();
+					}, 5000);
+				}
+			});
+		}
+		
+		
 		var progress = 0;
 		var isTouchPointer = false;
-		scroll.addEventListener('click', function(e){
+		scroll.addEventListener('tap', function(e){
 			if(isTouchPointer)return;
 			//var x = e.x||e.pageX;
 			//var width = x - scroll.offsetLeft;
@@ -221,11 +252,11 @@ Control.prototype = {
 			isTouchPointer = false;
 		});
 		
-		btnPlay.addEventListener('click', handleBtnPlay);
-		btnVolume.addEventListener('click', handleBtnVolume);
-		btnSwipe.addEventListener('click', handleBtnSwipe);
-		btnView.addEventListener('click', handleBtnView);
-		btnFullScreen.addEventListener('click', handleBtnFullScreen);
+		btnPlay.addEventListener('tap', handleBtnPlay);
+		btnVolume.addEventListener('tap', handleBtnVolume);
+		btnSwipe.addEventListener('tap', handleBtnSwipe);
+		btnView.addEventListener('tap', handleBtnView);
+		btnFullScreen.addEventListener('tap', handleBtnFullScreen);
 		
 		
 		function handleBtnPlay(e){
@@ -500,9 +531,11 @@ Control.prototype = {
 	requestFullScreen: function(){
 		var self = this;
 		var target = self.container;
-		target.setAttribute('fullscreen', '');
-		if(!window.requestFullScreen(target)){
+		if(!target.requestFullScreen){
 			window.alert(meta.error.notSupportFullScreen.msg);
+		}else{
+			target.setAttribute('fullscreen', '');
+			target.requestFullScreen();
 		}
 	},
 	cancelFullScreen: function(){
@@ -510,8 +543,62 @@ Control.prototype = {
 		var target = self.container;
 		target.removeAttribute('fullscreen');
 		document.cancelFullScreen();
+	},
+	show: function(speed){
+		var self = this;
+		speed = speed!==undefined?speed: 1000;
+		var target = self.controlContainer;
+		var floatingElements = self.floatingElements;
+		startAnim(target);
+		for(var i in floatingElements){
+			startAnim(floatingElements[i]);
+		}
+		
+		function startAnim(target){
+			target.style.opacity = '0';
+			target.style.display = '';
+			target.isShowing = true;
+			createjs.Ticker.setFPS(createjs.Ticker.RAF);
+			
+			createjs.Tween.get(target, {override:true})
+				//.set({opacity: 0}, target.style)
+				.to({opacity: 1}, speed, createjs.Ease.quadOut)
+				.call(function(){
+					target.style.opacity = '';
+					target.isShowing = false;
+				});
+		}
+	},
+	hide: function(speed){
+		var self = this;
+		speed = speed!==undefined?speed: 1000;
+		var target = self.controlContainer;
+		var floatingElements = self.floatingElements;
+		startAnim(target);
+		for(var i in floatingElements){
+			startAnim(floatingElements[i]);
+		}
+		
+		function startAnim(target){
+			target.style.opacity = '1';
+			target.isHidding = true;
+			createjs.Ticker.setFPS(createjs.Ticker.RAF);
+			createjs.Tween.get(target, {override:true})
+				//.set({opacity: 1}, target.style)
+				.to({opacity: 0}, speed, createjs.Ease.quadOut)
+				.call(function(){
+					target.style.opacity = '';
+					target.style.display = 'none';
+					target.isHidding = false;
+				});
+			//target.style.display = 'none';
+		}
+	},
+	isHidden: function(target){
+		var self = this;
+		target = target||self.controlContainer;
+		return dom.isHidden(target);
 	}
 };
-
 
 module.exports = Control;

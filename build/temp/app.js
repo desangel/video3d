@@ -1,5 +1,286 @@
 /* jshint node: true */
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+/* global window, document */
+"use strict";
+
+var canTouch = function(){
+	var result;
+	try{
+		result = document.createEvent("TouchEvent");
+	}catch(e){
+		result = false;
+	}
+	return !!result;
+};
+
+var EventTarget = window.EventTarget||window.Node;  //for ios
+EventTarget.prototype._addEventListener = EventTarget.prototype.addEventListener;
+//var _removeEventListener = EventTarget.prototype.removeEventListener;
+
+EventTarget.prototype.trigger = function(eventName, data){
+	var self = this;
+	var event;
+	data = data||{};
+	var view = data['view']||window;
+	var detail = data['detail'];
+	var screenX = data['screenX'];
+	var screenY = data['screenY'];
+	var clientX = data['clientX'];
+	var clientY = data['clientY'];
+	var ctrlKey = !!data['ctrlKey'];
+	var altKey = !!data['altKey'];
+	var shiftKey = !!data['shiftKey'];
+	var metaKey = !!data['metaKey'];
+	var button = data['button']||0;
+	var relatedTarget = data['relatedTarget']||null;
+	
+	if(typeof eventName === 'string'){
+		if(document.createEvent){
+			switch(eventName){
+			case 'tap':
+			case 'tapend':
+				event = document.createEvent("CustomEvent");
+				event.initCustomEvent(eventName, true, true, detail); //type bubbles cancelable detail
+				for(var i in data){
+					if(i!=='detail')event[i] = data[i];
+				}
+				break;
+			case 'touchstart':
+			case 'touchmove':
+			case 'touchend':
+			case 'touchcancel':
+				event = document.createEvent("TouchEvent");
+				event.initTouchEvent(eventName, true, true, view, detail);
+				break;
+			case 'click':
+			case 'mousedown':
+			case 'mouseenter':
+			case 'mouseleave':
+			case 'mousemove':
+			case 'mouseout':
+			case 'mouseover':
+			case 'mousewheel':
+				event = document.createEvent("MouseEvents");
+				event.initMouseEvent(eventName, true, true, view, detail, 
+					screenX, screenY, clientX, clientY, ctrlKey, altKey, shiftKey, metaKey, button, relatedTarget);
+				break;
+			default:
+				event = document.createEvent("HTMLEvents");
+				event.initEvent(eventName, true, true);
+			}
+		}else{
+			event = document.createEventObject();
+			event.eventType = eventName;
+		}
+		event.eventName = eventName;
+	}else if(typeof eventName === 'object'){
+		event = eventName;
+	}
+	//event.detail===undefined&&(event.detail = data);
+	event.data===undefined&&(event.data = data);
+	//console.log(event)
+	if(document.createEvent){
+		self.dispatchEvent(event);
+	}else{
+		self.fireEvent("on"+event.eventType, event);
+	}
+};
+
+EventTarget.prototype.addEventListener = function(event, callback, useCapture){
+	var self = this;
+	var result;
+	result = self._addEventListener(event, callback, useCapture);
+	
+	var touchFn = function(e){
+		var data = {};
+		var touch = e.touches[0];
+		data.screenX = touch.screenX;
+		data.screenY = touch.screenY;
+		data.clientX = touch.clientX;
+		data.clientY = touch.clientY;
+		
+		data.force = touch.force;
+		data.identifier = touch.identifier;
+		data.radiusX = touch.radiusX;
+		data.radiusY = touch.radiusY;
+		data.rotationAngle = touch.rotationAngle;
+		
+		data.ctrlKey = e.ctrlKey;
+		data.altKey = e.altKey;
+		data.shiftKey = e.shiftKey;
+		data.metaKey = e.metaKey;
+		
+		data.offsetX = getOffsetX(e, data.clientX);
+		data.offsetY = getOffsetY(e, data.clientY);
+		
+		data.touches = e.touches;
+		data.changedTouches = e.changedTouches;
+		data.view = e.view;
+		
+		this.trigger(event, data);
+	};
+	
+	var mouseFn = function(e){
+		var data = {};
+		data.screenX = e.screenX;
+		data.screenY = e.screenY;
+		data.clientX = e.clientX;
+		data.clientY = e.clientY;
+		data.ctrlKey = e.ctrlKey;
+		data.altKey = e.altKey;
+		data.shiftKey = e.shiftKey;
+		data.metaKey = e.metaKey;
+		data.button = e.button;
+		data.relatedTarget = e.relatedTarget;
+		
+		data.x = e.x;
+		data.y = e.y;
+		data.offsetX = getOffsetX(e, data.clientX);
+		data.offsetY = getOffsetY(e, data.clientY);
+		data.pageX = e.pageX;
+		data.pageY = e.pageY;
+		data.layerX = e.layerX;
+		data.layerY = e.layerY;
+		data.view = e.view;
+		
+		this.trigger(event, data);
+	};
+	
+	switch(event){
+	case 'tap':
+		if(canTouch()){
+			self._addEventListener('touchstart', touchFn, useCapture);	
+		}else{
+			self._addEventListener('mousedown', mouseFn, useCapture);	
+		}
+		break;
+	case 'tapend':
+		if(canTouch()){
+			self._addEventListener('touchend', touchFn, useCapture);	
+		}else{
+			self._addEventListener('mouseup', mouseFn, useCapture);	
+		}
+		break;
+	}
+	return result;
+};
+
+function getOffsetX(e, clientX){
+	var evt =e||window.event;
+	var result;
+    var srcObj = evt.target || evt.srcElement;
+    if (evt.offsetX){
+        result = evt.offsetX;
+    }else{
+        var rect = srcObj.getBoundingClientRect();
+        clientX = clientX!==undefined?clientX:evt.clientX;
+        result = clientX - rect.left;
+    }
+	return result;
+}
+
+function getOffsetY(e, clientY){
+	var evt =e||window.event;
+	var result;
+    var srcObj = evt.target || evt.srcElement;
+    if (evt.offsetX){
+        result= evt.offsetY;
+    }else{
+        var rect = srcObj.getBoundingClientRect();
+        clientY =  clientY!==undefined?clientY:evt.clientY;
+        result = clientY - rect.left;
+    }
+	return result;
+}
+
+},{}],2:[function(require,module,exports){
+/* global window, document */
+"use strict";
+
+require('./EventTarget');
+
+var vendors = ['webkit', 'moz','o','ms'];
+var Element = window.Element;
+
+initURL();
+initMediaSource();
+initRequestAnimationFrame();
+initRequestFullScreen();
+
+function initURL(){
+	window.URL = window.URL||window.webkitURL;
+}
+
+function initMediaSource(){
+	window.MediaSource = window.MediaSource||window.WebKitMediaSource;
+}
+
+function initRequestAnimationFrame(){
+	var lastTime = 0;
+	window.requestAnimFrame = window.requestAnimationFrame;
+	window.cancelAnimFrame = window.cancelAnimationFrame;
+	for(var x = 0; x < vendors.length && !window.requestAnimFrame; ++x) {
+		window.requestAnimFrame = window[vendors[x]+'RequestAnimationFrame'];
+		window.cancelAnimFrame = window[vendors[x]+'CancelAnimationFrame'] || window[vendors[x]+'CancelRequestAnimationFrame'];
+	}
+
+	if (!window.requestAnimFrame){
+		window.requestAnimFrame = function(callback) {
+			var currTime = new Date().getTime();
+			var timeToCall = Math.max(0, 16 - (currTime - lastTime));
+			var id = window.setTimeout(function() { callback(currTime + timeToCall); },
+			timeToCall);
+			lastTime = currTime + timeToCall;
+			return id;
+		};
+	}
+
+	if (!window.cancelAnimFrame){
+		window.cancelAnimFrame = function(id) {
+			clearTimeout(id);
+		};
+	}
+}
+
+function initRequestFullScreen(){
+	if(!window.requestFullScreen){
+		window.requestFullScreen = requestFullScreen;
+		hackRequestFullScreen();
+		hackCancelFullScreen();
+	}
+	
+	function requestFullScreen(element){
+		element.requestFullScreen = element.requestFullScreen;
+		for(var x = 0; x < vendors.length && !element.requestFullScreen; ++x) {
+			element.requestFullScreen = element[vendors[x]+'RequestFullScreen'];
+		}
+		if(element.requestFullScreen){
+			if(arguments.length<=1){
+				element.requestFullScreen.call(element);
+			}else{
+				element.requestFullScreen.apply(element, arguments.slice(1));
+			}
+			return true;
+		}
+		else{
+			return false;
+		}
+	}
+	
+	function hackRequestFullScreen(){
+		for(var x = 0; x < vendors.length && !Element.prototype.requestFullScreen; ++x) {
+			Element.prototype.requestFullScreen = Element.prototype[vendors[x]+'RequestFullScreen'];
+		}
+	}
+	
+	function hackCancelFullScreen(){
+		document.cancelFullScreen = document.exitFullscreen||document.webkitExitFullscreen;
+		for(var x = 0; x < vendors.length && !document.cancelFullScreen; ++x) {
+			document.cancelFullScreen = document[vendors[x]+'CancelFullScreen'];
+		}
+	}
+}
+},{"./EventTarget":1}],3:[function(require,module,exports){
 /* //global document  */
 /* jshint node: true */
 "use strict";
@@ -35,7 +316,7 @@ function createElement(options){
 module.exports = {
 	createElement: createElement
 };
-},{"./dom":2}],2:[function(require,module,exports){
+},{"./dom":4}],4:[function(require,module,exports){
 /* global document  */
 /* jshint node: true */
 
@@ -82,14 +363,44 @@ function elementToStr(element){
 	})();
 }
 
+function getParentElements(container, elem){
+	var result = [];
+	for(var i = elem.parentNode; i!==container; i=i.parentNode){
+		result.push(i);
+	}
+}
+
+function isVisible(elem){
+	return elem.style.display !== 'none'&&elem.style.visibility !== 'hidden'&&elem.style.opacity !== '0';
+}
+
+function isHidden(elem){
+	return !isVisible(elem) ||
+		isVisible(elem) &&
+		(function(){
+			var elements = getParentElements( elem.ownerDocument, elem );
+			var result = false;
+			for(var i in elements){
+				if(!isVisible(elements[i])){
+					result = true;
+					break;
+				}
+			}
+			return result;
+		}());
+}
+
 module.exports = {
 	addAttribute: addAttribute,
 	attrToStyle: attrToStyle,
 	createElement: createElement,
 	elementToStr: elementToStr,
-	setAttribute: setAttribute
+	setAttribute: setAttribute,
+	
+	getParentElements: getParentElements,
+	isHidden: isHidden
 };
-},{}],3:[function(require,module,exports){
+},{}],5:[function(require,module,exports){
 
 "use strict";
 var dom = require('./dom');
@@ -101,7 +412,7 @@ module.exports = {
 	button: button,
 	video: video
 };
-},{"./button":1,"./dom":2,"./video":5}],4:[function(require,module,exports){
+},{"./button":3,"./dom":4,"./video":7}],6:[function(require,module,exports){
 /* jshint node: true */
 
 "use strict";
@@ -121,7 +432,7 @@ function createElement(options){
 module.exports = {
 	createElement: createElement
 };
-},{"./dom":2}],5:[function(require,module,exports){
+},{"./dom":4}],7:[function(require,module,exports){
 /* //global document  */
 /* jshint node: true */
 "use strict";
@@ -184,11 +495,13 @@ module.exports = {
 	createElement: createElement,
 	checkVideoType: checkVideoType
 };
-},{"./dom":2,"./source":4}],6:[function(require,module,exports){
+},{"./dom":4,"./source":6}],8:[function(require,module,exports){
 (function (global){
 /* global document */
 /* jshint node: true */
 "use strict";
+
+var version = '1.0.0';
 
 var variables = require('./variables');
 var util = require('./util');
@@ -229,7 +542,7 @@ Video3d.prototype = {
 			container = document.querySelector(container);
 		}else if(container == null){
 			container = document.createElement('div');
-			document.body.appendChild(container);
+			//document.body.appendChild(container);
 		}
 		container.classList.add(meta.className.container);
 		
@@ -278,11 +591,21 @@ Video3d.prototype = {
 	}
 };
 
+Video3d.version = version;
+Video3d.isSupport = function(){
+	var result = true;
+	try{
+		new Video3d();
+	}catch(e){
+		result = false;
+	}
+	return result;
+};
 
 module.exports = Video3d;
 global.video3d = Video3d;
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./html":3,"./media":8,"./player":13,"./util":27,"./variables":31}],7:[function(require,module,exports){
+},{"./html":5,"./media":10,"./player":15,"./util":26,"./variables":30}],9:[function(require,module,exports){
 
 
 /**
@@ -437,7 +760,7 @@ module.exports = {
 };
 
 
-},{}],8:[function(require,module,exports){
+},{}],10:[function(require,module,exports){
 
 "use strict";
 var util = require('../util');
@@ -451,7 +774,7 @@ var Transmuxer = require('./transmuxer');
 var media = util.extend(true, {}, Stream, mp4, ExpGolomb, Transmuxer);
 
 module.exports = media;
-},{"../util":27,"./exp-golomb":7,"./mp4-generator":9,"./stream":10,"./transmuxer":11}],9:[function(require,module,exports){
+},{"../util":26,"./exp-golomb":9,"./mp4-generator":11,"./stream":12,"./transmuxer":13}],11:[function(require,module,exports){
 
 'use strict';
 
@@ -1191,7 +1514,7 @@ module.exports = {
 	mp4: mp4
 };
 
-},{}],10:[function(require,module,exports){
+},{}],12:[function(require,module,exports){
 /**
  * A lightweight readable stream implemention that handles event dispatching.
  * Objects that inherit from streams should call init in their constructors.
@@ -1283,7 +1606,7 @@ Stream.prototype = {
 module.exports = {
 	Stream: Stream
 };
-},{}],11:[function(require,module,exports){
+},{}],13:[function(require,module,exports){
 
 /**
  * A stream-based mp2t to mp4 converter. This utility is used to
@@ -2343,10 +2666,16 @@ module.exports = {
 	Transmuxer: Transmuxer,
 	mp2t: mp2t
 };
-},{"./exp-golomb":7,"./mp4-generator":9,"./stream":10}],12:[function(require,module,exports){
+},{"./exp-golomb":9,"./mp4-generator":11,"./stream":12}],14:[function(require,module,exports){
 /* global window, document */
 "use strict";
-require('./requestFullScreen');
+var tween = require('tween');
+var CSSPlugin = require('tweenCSSPlugin').createjs.CSSPlugin;
+var createjs = tween.createjs;
+createjs.CSSPlugin = CSSPlugin;
+createjs.CSSPlugin.install(createjs.Tween);
+
+require('../hack');
 var variables = require('../variables');
 var html = require('../html');
 var util = require('../util');
@@ -2359,7 +2688,9 @@ var displayHidden = variables.displayHidden;
 var dateHelper = util.date;
 
 var URL = window.URL;
-var MediaSource = window.MediaSource||window.WebKitMediaSource;
+var MediaSource = window.MediaSource;
+var setTimeout = window.setTimeout;
+var clearTimeout = window.clearTimeout;
 
 var name = 'control-';
 var meta = {
@@ -2384,6 +2715,8 @@ var meta = {
 };
 
 var defaultControlOptions = {
+	floating: true,   //whether control bar is floating on the renderer
+	floatingElements: [], //outside element
 	autoplay: false,
 	loop: false,
 	scroll: true,
@@ -2406,13 +2739,15 @@ Control.prototype = {
 		var container = options.container;
 		var video = options.video;
 		var renderer = options.renderer;
-		var controlOptions = util.extend({}, defaultControlOptions, options.control);
+		var controlOptions = util.extend({}, defaultControlOptions, options);
 		var autoplay = controlOptions.autoplay;
 		var loop = controlOptions.loop;
 		var dragFile = controlOptions.dragFile;
+		var floating = controlOptions.floating;
+		self.floatingElements = controlOptions.floatingElements;
 		
 		video.setAttribute('webkit-playsinline','');  //行内播放
-		video.setAttribute('preload','');  //行内播放
+		video.setAttribute('preload','');
 		
 		renderer.keyframe = function(){
 			self.keyframe();
@@ -2472,6 +2807,7 @@ Control.prototype = {
 		self.container = container;
 		self.video = video;
 		self.renderer = renderer;
+		self.controlContainer = controlContainer;
 		self.scroll = scroll;
 		self.scrollPointer = scrollPointer;
 		self.scrollBg1 = scrollBg1;
@@ -2524,9 +2860,27 @@ Control.prototype = {
 			self.renderVolume();
 		});
 		
+		var controlShowAnimTick;
+		if(floating){
+			renderer.container.setAttribute('floating', '');
+			renderer.container.addEventListener('click', function(){
+				if(controlContainer.isShowing||controlContainer.isHidding)return;
+				if(controlShowAnimTick)clearTimeout(controlShowAnimTick);
+				if(!self.isHidden()){
+					self.hide();
+				}else{
+					self.show();
+					controlShowAnimTick = setTimeout(function(){
+						self.hide();
+					}, 5000);
+				}
+			});
+		}
+		
+		
 		var progress = 0;
 		var isTouchPointer = false;
-		scroll.addEventListener('click', function(e){
+		scroll.addEventListener('tap', function(e){
 			if(isTouchPointer)return;
 			//var x = e.x||e.pageX;
 			//var width = x - scroll.offsetLeft;
@@ -2567,11 +2921,11 @@ Control.prototype = {
 			isTouchPointer = false;
 		});
 		
-		btnPlay.addEventListener('click', handleBtnPlay);
-		btnVolume.addEventListener('click', handleBtnVolume);
-		btnSwipe.addEventListener('click', handleBtnSwipe);
-		btnView.addEventListener('click', handleBtnView);
-		btnFullScreen.addEventListener('click', handleBtnFullScreen);
+		btnPlay.addEventListener('tap', handleBtnPlay);
+		btnVolume.addEventListener('tap', handleBtnVolume);
+		btnSwipe.addEventListener('tap', handleBtnSwipe);
+		btnView.addEventListener('tap', handleBtnView);
+		btnFullScreen.addEventListener('tap', handleBtnFullScreen);
 		
 		
 		function handleBtnPlay(e){
@@ -2611,7 +2965,7 @@ Control.prototype = {
 			e.preventDefault();
 			var files = e.dataTransfer.files;
 			var file = files[0];
-			var src = window.URL.createObjectURL(file);
+			var src = URL.createObjectURL(file);
 			loadVideo(src);
 		}
 		
@@ -2846,9 +3200,11 @@ Control.prototype = {
 	requestFullScreen: function(){
 		var self = this;
 		var target = self.container;
-		target.setAttribute('fullscreen', '');
-		if(!window.requestFullScreen(target)){
+		if(!target.requestFullScreen){
 			window.alert(meta.error.notSupportFullScreen.msg);
+		}else{
+			target.setAttribute('fullscreen', '');
+			target.requestFullScreen();
 		}
 	},
 	cancelFullScreen: function(){
@@ -2856,12 +3212,66 @@ Control.prototype = {
 		var target = self.container;
 		target.removeAttribute('fullscreen');
 		document.cancelFullScreen();
+	},
+	show: function(speed){
+		var self = this;
+		speed = speed!==undefined?speed: 1000;
+		var target = self.controlContainer;
+		var floatingElements = self.floatingElements;
+		startAnim(target);
+		for(var i in floatingElements){
+			startAnim(floatingElements[i]);
+		}
+		
+		function startAnim(target){
+			target.style.opacity = '0';
+			target.style.display = '';
+			target.isShowing = true;
+			createjs.Ticker.setFPS(createjs.Ticker.RAF);
+			
+			createjs.Tween.get(target, {override:true})
+				//.set({opacity: 0}, target.style)
+				.to({opacity: 1}, speed, createjs.Ease.quadOut)
+				.call(function(){
+					target.style.opacity = '';
+					target.isShowing = false;
+				});
+		}
+	},
+	hide: function(speed){
+		var self = this;
+		speed = speed!==undefined?speed: 1000;
+		var target = self.controlContainer;
+		var floatingElements = self.floatingElements;
+		startAnim(target);
+		for(var i in floatingElements){
+			startAnim(floatingElements[i]);
+		}
+		
+		function startAnim(target){
+			target.style.opacity = '1';
+			target.isHidding = true;
+			createjs.Ticker.setFPS(createjs.Ticker.RAF);
+			createjs.Tween.get(target, {override:true})
+				//.set({opacity: 1}, target.style)
+				.to({opacity: 0}, speed, createjs.Ease.quadOut)
+				.call(function(){
+					target.style.opacity = '';
+					target.style.display = 'none';
+					target.isHidding = false;
+				});
+			//target.style.display = 'none';
+		}
+	},
+	isHidden: function(target){
+		var self = this;
+		target = target||self.controlContainer;
+		return dom.isHidden(target);
 	}
 };
 
-
 module.exports = Control;
-},{"../html":3,"../media":8,"../util":27,"../variables":31,"./requestFullScreen":16}],13:[function(require,module,exports){
+},{"../hack":2,"../html":5,"../media":10,"../util":26,"../variables":30,"tween":"tween","tweenCSSPlugin":"tweenCSSPlugin"}],15:[function(require,module,exports){
 /**
 * player
 */
@@ -2899,10 +3309,10 @@ Player.prototype = {
 };
 
 module.exports = Player;
-},{"./control":12,"./renderer":14,"./support":17}],14:[function(require,module,exports){
+},{"./control":14,"./renderer":16,"./support":17}],16:[function(require,module,exports){
 /* global window, document, THREE */
 "use strict";
-require('./requestAnimFrame');
+require('../hack');
 var variables = require('../variables');
 var util = require('../util');
 var html = require('../html');
@@ -2932,8 +3342,10 @@ var defaultOptions = {
 	
 	needEnoughData: false,
 	definition: definitionType.low,
-	
+	textureType: 'video'
 };
+
+var isInit = true;
 
 var VideoTexture = function ( video, mapping, wrapS, wrapT, magFilter, minFilter, format, type, anisotropy ) {
 	THREE.Texture.call( this, video, mapping, wrapS, wrapT, magFilter, minFilter, format, type, anisotropy );
@@ -2945,16 +3357,47 @@ var VideoTexture = function ( video, mapping, wrapS, wrapT, magFilter, minFilter
 	}
 	update();
 };
-
 VideoTexture.prototype = Object.create( THREE.Texture.prototype );
 VideoTexture.prototype.constructor = VideoTexture;
+
+var VideoCanvasTexture = function ( video, mapping, wrapS, wrapT, magFilter, minFilter, format, type, anisotropy ) {
+	var scope = this;
+	
+	var videoImage = document.createElement( 'canvas' );
+	var	videoWidth = video.videoWidth||0;
+	var	videoHeight = video.videoHeight||0;
+	videoImage.width = videoWidth;
+	videoImage.height = videoHeight;
+	
+	THREE.Texture.call( scope, videoImage, mapping, wrapS, wrapT, magFilter, minFilter, format, type, anisotropy );
+	videoImage = scope.image;
+	var ctx = videoImage.getContext('2d');
+	
+	function update() {
+		window.requestAnimFrame( update );
+		ctx.drawImage(video, 0, 0, ctx.canvas.width,ctx.canvas.height);
+		scope.needsUpdate = true;
+	}
+	update();
+	
+	scope.videoImageCtx = ctx;
+};
+VideoCanvasTexture.prototype = Object.create( THREE.Texture.prototype );
+VideoCanvasTexture.prototype.constructor = VideoCanvasTexture;
 
 function Renderer(){
 	
 }
 Renderer.prototype.loadVideo = function(video){
 	var self = this;
+	
 	self.createTexture(video);
+	// durationchange loadedmetadata
+	//video.addEventListener('durationchange', handleloadedmetadata, false);
+	//function handleloadedmetadata(){
+	//	
+	//}
+	//video.removeEventListener('durationchange', handleloadedmetadata);
 };
 Renderer.prototype.createTexture = function(video){
 	var self = this;
@@ -2962,8 +3405,11 @@ Renderer.prototype.createTexture = function(video){
 	var texture;
 	
 	//create video texture 
-	
-	texture = new VideoTexture( video );
+	if(self.textureType==='canvas'){
+		texture = new VideoCanvasTexture( video );
+	}else{
+		texture = new VideoTexture( video );
+	}
 	
 	texture.minFilter = THREE.LinearFilter;
 	texture.magFilter = THREE.LinearFilter;
@@ -2989,7 +3435,7 @@ Renderer.prototype.updateTexture = function(){
 };
 Renderer.prototype.init = function(options){
 	var self = this;
-	options = util.extend(options, defaultOptions);
+	options = util.extend({}, defaultOptions, options);
 	var outContainer = options.container;
 	var video = options.video;
 	var useTouch = options.useTouch;
@@ -2998,6 +3444,7 @@ Renderer.prototype.init = function(options){
 	var useVirtualReality =options.useVirtualReality;
 	var needEnoughData = options.needEnoughData;
 	var definition = options.definition;
+	self.textureType = options.textureType;
 	
 	var container = dom.createElement({
 		className: namespace+meta.className.container
@@ -3084,10 +3531,8 @@ Renderer.prototype.init = function(options){
 	container.appendChild( renderer.domElement );
 	//document.body.appendChild( renderer.domElement );
 
-	//
 	camera = new THREE.PerspectiveCamera( defaultFov, canvasWidth / canvasHeight, 1, 10000 );
 	
-	//
 	canvas.addEventListener( 'mousedown', onDocumentMouseDown, false );
 	canvas.addEventListener( 'mousemove', onDocumentMouseMove, false );
 	canvas.addEventListener( 'mouseup', onDocumentMouseUp, false );
@@ -3121,6 +3566,7 @@ Renderer.prototype.init = function(options){
 	self.stop = stop;
 	self.nextframe = nextframe;
 	
+	self.container = container;
 	self.video = video;
 	self.useTouch = useTouch;
 	self.useDeviceMotion = useDeviceMotion;
@@ -3456,7 +3902,7 @@ Renderer.prototype.init = function(options){
 				}
 			}
 			
-			render();
+			if(isInit)render();
 			window.requestAnimFrame( tick );
 			
 			if(typeof self.keyframe === 'function'){ self.keyframe(self); }
@@ -3539,76 +3985,7 @@ Renderer.prototype.init = function(options){
 
 
 module.exports = Renderer;
-},{"../html":3,"../util":27,"../variables":31,"./requestAnimFrame":15}],15:[function(require,module,exports){
-/* global window */
-"use strict";
-function initRequestAnimationFrame(){
-	var lastTime = 0;
-	var vendors = ['webkit', 'moz','o','ms'];
-	window.requestAnimFrame = window.requestAnimationFrame;
-	window.cancelAnimFrame = window.cancelAnimationFrame;
-	for(var x = 0; x < vendors.length && !window.requestAnimFrame; ++x) {
-		window.requestAnimFrame = window[vendors[x]+'RequestAnimationFrame'];
-		window.cancelAnimFrame = window[vendors[x]+'CancelAnimationFrame'] || window[vendors[x]+'CancelRequestAnimationFrame'];
-	}
-
-	if (!window.requestAnimFrame){
-		window.requestAnimFrame = function(callback) {
-			var currTime = new Date().getTime();
-			var timeToCall = Math.max(0, 16 - (currTime - lastTime));
-			var id = window.setTimeout(function() { callback(currTime + timeToCall); },
-			timeToCall);
-			lastTime = currTime + timeToCall;
-			return id;
-		};
-	}
-
-	if (!window.cancelAnimFrame){
-		window.cancelAnimFrame = function(id) {
-			clearTimeout(id);
-		};
-	}
-}
-initRequestAnimationFrame();
-},{}],16:[function(require,module,exports){
-/* global window, document */
-"use strict";
-function initRequestFullScreen(){
-	var vendors = ['webkit', 'moz','o','ms'];
-	if(!window.requestFullScreen){
-		window.requestFullScreen = requestFullScreen;
-		hackCancelFullScreen();
-	}
-	
-	function requestFullScreen(element){
-		element.requestFullScreen = element.requestFullScreen;
-		for(var x = 0; x < vendors.length && !element.requestFullScreen; ++x) {
-			element.requestFullScreen = element[vendors[x]+'RequestFullScreen'];
-		}
-		if(element.requestFullScreen){
-			if(arguments.length<=1){
-				element.requestFullScreen.call(element);
-			}else{
-				element.requestFullScreen.apply(element, arguments.slice(1));
-			}
-			return true;
-		}
-		else{
-			return false;
-		}
-	}
-	
-	
-	function hackCancelFullScreen(){
-		document.cancelFullScreen = document.exitFullscreen||document.webkitExitFullscreen;
-		for(var x = 0; x < vendors.length && !document.cancelFullScreen; ++x) {
-			document.cancelFullScreen = document[vendors[x]+'CancelFullScreen'];
-		}
-	}
-}
-initRequestFullScreen();
-
-},{}],17:[function(require,module,exports){
+},{"../hack":2,"../html":5,"../util":26,"../variables":30}],17:[function(require,module,exports){
 
 "use strict";
 //var browser = require('../util/browser');
@@ -3648,7 +4025,7 @@ module.exports = {
 	isSupport: isSupport,
 	createMessage: createMessage
 };
-},{"../html":3}],18:[function(require,module,exports){
+},{"../html":5}],18:[function(require,module,exports){
 /* global window */
 "use strict";
 
@@ -4503,19 +4880,8 @@ var getDateHelper = function(){
 
 module.exports = getDateHelper();
 },{}],26:[function(require,module,exports){
-/* global window */
-"use strict";
-
-if(!window){
-	return;
-}
-window.URL = window.URL||window.webkitURL;
-
-
-},{}],27:[function(require,module,exports){
 
 "use strict";
-require('./hack');
 var classExtend = require('./classExtend');
 var core = require('./core');
 var object = require('./object');
@@ -4542,7 +4908,7 @@ var util = {
 util = core.extend(true, util, core, classExtend, object);
 
 module.exports = util;
-},{"./blob":18,"./browser":19,"./classExtend":20,"./code":21,"./collection":22,"./cookie":23,"./core":24,"./date":25,"./hack":26,"./object":28,"./path":29,"./xhr":30}],28:[function(require,module,exports){
+},{"./blob":18,"./browser":19,"./classExtend":20,"./code":21,"./collection":22,"./cookie":23,"./core":24,"./date":25,"./object":27,"./path":28,"./xhr":29}],27:[function(require,module,exports){
 "use strict";
 //ECMA SCRIPT 5
 function defineProperty(obj, name, prop){
@@ -4569,7 +4935,7 @@ module.exports = {
 	defineProperty: defineProperty,
 	defineProperties: defineProperties
 };
-},{}],29:[function(require,module,exports){
+},{}],28:[function(require,module,exports){
 /* global document */
 "use strict";
 function findCurrentPath(){
@@ -4598,7 +4964,7 @@ function findCurrentPath(){
 module.exports = {
 	findCurrentPath: findCurrentPath
 };
-},{}],30:[function(require,module,exports){
+},{}],29:[function(require,module,exports){
 /* jshint evil: true */
 /* global window */
 "use strict";
@@ -4745,7 +5111,7 @@ function FormDataShim(xhr){
 }
 
 module.exports = xhrUtil;
-},{"./blob":18}],31:[function(require,module,exports){
+},{"./blob":18}],30:[function(require,module,exports){
 
 "use strict";
 var namespace = 'video3d-';
@@ -4755,4 +5121,4 @@ module.exports = {
 	namespace: namespace,
 	displayHidden: displayHidden
 };
-},{}]},{},[6,31]);
+},{}]},{},[8,30]);

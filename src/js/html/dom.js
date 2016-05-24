@@ -44,10 +44,40 @@ function elementToStr(element){
 	})();
 }
 
+function getParentElements(container, elem){
+	var result = [];
+	for(var i = elem.parentNode; i!==container; i=i.parentNode){
+		result.push(i);
+	}
+}
+
+function isVisible(elem){
+	return elem.style.display !== 'none'&&elem.style.visibility !== 'hidden'&&elem.style.opacity !== '0';
+}
+
+function isHidden(elem){
+	return !isVisible(elem) ||
+		isVisible(elem) &&
+		(function(){
+			var elements = getParentElements( elem.ownerDocument, elem );
+			var result = false;
+			for(var i in elements){
+				if(!isVisible(elements[i])){
+					result = true;
+					break;
+				}
+			}
+			return result;
+		}());
+}
+
 module.exports = {
 	addAttribute: addAttribute,
 	attrToStyle: attrToStyle,
 	createElement: createElement,
 	elementToStr: elementToStr,
-	setAttribute: setAttribute
+	setAttribute: setAttribute,
+	
+	getParentElements: getParentElements,
+	isHidden: isHidden
 };
