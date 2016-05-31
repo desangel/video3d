@@ -3879,6 +3879,14 @@ function createElement(options){
 	return element;
 }
 
+function addClass(element, className){
+	element.classList.add(className);
+}
+
+function removeClass(element, className){
+	element.classList.remove(className);
+}
+
 function addAttribute(element, attr, value){
 	if(value===true){
 		setAttribute(element, attr, '');
@@ -3937,6 +3945,8 @@ function isHidden(elem){
 }
 
 module.exports = {
+	addClass: addClass,
+	removeClass: removeClass,
 	addAttribute: addAttribute,
 	attrToStyle: attrToStyle,
 	createElement: createElement,
@@ -4134,6 +4144,9 @@ Video3d.prototype = {
 	},
 	togglePlay: function(){
 		this.player.control.togglePlay();
+	},
+	toggleFullScreen: function(type){
+		this.player.control.toggleFullScreen(type);
 	}
 };
 
@@ -6231,6 +6244,7 @@ var buttonDom = html.button;
 
 var namespace = variables.namespace;
 var displayHidden = variables.displayHidden;
+var fullscreen = variables.fullscreen;
 var dateHelper = util.date;
 
 var URL = window.URL;
@@ -6492,12 +6506,7 @@ Control.prototype = {
 		}
 		
 		function handleBtnFullScreen(){
-			var isFullScreen = container.hasAttribute('fullscreen');
-			if(isFullScreen){
-				self.cancelFullScreen();
-			}else{
-				self.requestFullScreen();
-			}
+			self.toggleFullScreen();
 		}
 		
 		function handleDragFile(e){
@@ -6743,21 +6752,35 @@ Control.prototype = {
 		renderer.useVirtualReality = true;
 		target.setAttribute('view_type', 'vr');
 	},
-	requestFullScreen: function(){
+	toggleFullScreen: function(type){
 		var self = this;
 		var target = self.container;
-		if(!target.requestFullScreen){
-			window.alert(meta.error.notSupportFullScreen.msg);
+		var isFullScreen = target.hasAttribute('fullscreen');
+		if(isFullScreen){
+			self.cancelFullScreen(type);
 		}else{
-			target.setAttribute('fullscreen', '');
+			self.requestFullScreen(type);
+		}
+	},
+	requestFullScreen: function(type){
+		var self = this;
+		var target = self.container;
+		target.setAttribute('fullscreen', '');
+		if(type||!target.requestFullScreen){
+			dom.addClass(target, fullscreen);
+		}else{
 			target.requestFullScreen();
 		}
 	},
-	cancelFullScreen: function(){
+	cancelFullScreen: function(type){
 		var self = this;
 		var target = self.container;
 		target.removeAttribute('fullscreen');
-		document.cancelFullScreen();
+		if(type||!target.requestFullScreen){
+			dom.removeClass(target, fullscreen);
+		}else{
+			document.cancelFullScreen();
+		}
 	},
 	show: function(speed){
 		var self = this;
@@ -8662,10 +8685,12 @@ module.exports = xhrUtil;
 "use strict";
 var namespace = 'video3d-';
 var displayHidden = namespace+'hidden';
+var fullscreen = namespace+'fullscreen';
 
 module.exports = {
-	namespace: namespace,
-	displayHidden: displayHidden
+	displayHidden: displayHidden,
+	fullscreen: fullscreen,
+	namespace: namespace
 };
 },{}]},{},[8,30]);
 

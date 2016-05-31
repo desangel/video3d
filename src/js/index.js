@@ -89,6 +89,9 @@ Video3d.prototype = {
 	},
 	togglePlay: function(){
 		this.player.control.togglePlay();
+	},
+	toggleFullScreen: function(type){
+		this.player.control.toggleFullScreen(type);
 	}
 };
 

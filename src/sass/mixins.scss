@@ -97,6 +97,7 @@
 // Utilities
 // -------------------------
 $z-layers: (
+	"hidden": -100,
 	"default": 0,
 	"scroll": (
 		"bg1": 1,
@@ -104,8 +105,9 @@ $z-layers: (
 		"touch": 3,
 		"pointer": 4,
 	),
-  "toast": 9999,
-  "max": 10000,
+	"fullscreen": 9000,
+	"toast": 9999,
+	"max": 10000,
 );
 @function map-has-nested-keys($map, $keys...) {
   @each $key in $keys {

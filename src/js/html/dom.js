@@ -14,6 +14,14 @@ function createElement(options){
 	return element;
 }
 
+function addClass(element, className){
+	element.classList.add(className);
+}
+
+function removeClass(element, className){
+	element.classList.remove(className);
+}
+
 function addAttribute(element, attr, value){
 	if(value===true){
 		setAttribute(element, attr, '');
@@ -72,6 +80,8 @@ function isHidden(elem){
 }
 
 module.exports = {
+	addClass: addClass,
+	removeClass: removeClass,
 	addAttribute: addAttribute,
 	attrToStyle: attrToStyle,
 	createElement: createElement,
