@@ -120,7 +120,8 @@ module.exports = function(grunt) {
 		
 		jshint: {
 			options: {
-				jshintrc: '.jshintrc'
+				jshintrc: '.jshintrc',
+				reporterOutput: '', // 解决Path must be a String的问题
 			},
 			all: {
 				src: [

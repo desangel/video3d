@@ -11,19 +11,21 @@
     <meta name="x5-fullscreen" content="true">
 	<title>video3d demo</title>
 	<link rel="stylesheet" href="css/video3d.min.css">
-	<script src="../libs/three/three.min.js"></script>
+	<script src="https://cdn.bootcss.com/touchjs/0.2.14/touch.min.js"></script><script>window.touch||document.write('<script src="../libs/touch/touch.min.js"><\/script>');</script>
+	<!-- <script src="../libs/three/three.min.js"></script> -->
+	<script src="https://cdn.bootcss.com/three.js/r83/three.min.js"></script><script>window.THREE||document.write('<script src="../libs/three/three.min.js"><\/script>');</script>
 	<script src="../libs/hls/hls.js"></script>
 	<!-- <script src="../libs/jquery/jquery.min.js"></script> -->
 	<!-- <script src="../libs/media/mediaelement-and-player.js"></script> -->
 	<!-- <script src="../libs/three/effects/VREffect.js"></script> -->
 	<!-- <script src="../../video3d-gh-pages/libs/zencoder/zencoder-haze.js?"></script> -->
-	<script src="js/video3d.min.js?id=3"></script>
+	<script src="js/video3d.js?id=3"></script>
 	<!-- <script>try{document.write('<script src="js/video3d.js?id=3"><\/script>');}catch(e){alert(e);}</script> -->
 <style>
 *{ margin:0; padding:0; outline:none; }
 body { position: absolute; top:0; bottom:0; left:0; width:100%; }
-.video3d-container{ position: absolute; top:0; left:0; width:100%; height: 100%;}
-.video3d-container1{ position: absolute; top:10%; left:10%; width:80%; height: 80%;}
+.video3d-container1{ position: absolute; top:0; left:0; width:100%; height: 100%;}
+.video3d-container{ position: absolute; top:10%; left:10%; width:80%; height: 80%;}
 .video3d-video1 { position: absolute; top: 0; width: 1px; height: 1px; z-index: -100;}
 
 .btn-play { 
@@ -55,6 +57,7 @@ body { position: absolute; top:0; bottom:0; left:0; width:100%; }
 		text = '';
 		url = '';
 		url = '../assets/video/gliding1/gliding1.m3u8';
+		url = 'http://www.kuaitv.com/fastTvWebsite/assets/video/960p.mp4';
 		//url = '../assets/video/960p.mp4';
 		try{
 			var container = document.getElementById('playerContainer');

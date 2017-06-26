@@ -23,6 +23,7 @@ var URL = window.URL;
 var MediaSource = window.MediaSource;
 var setTimeout = window.setTimeout;
 var clearTimeout = window.clearTimeout;
+var touchPlugin = window.touch;
 
 var name = 'control-';
 var meta = {
@@ -79,6 +80,7 @@ Control.prototype = {
 		self.floatingElements = controlOptions.floatingElements;
 		
 		video.setAttribute('webkit-playsinline','');  //行内播放
+		video.setAttribute('playsinline','');  //行内播放
 		video.setAttribute('preload','');
 		
 		renderer.keyframe = function(){
@@ -216,7 +218,12 @@ Control.prototype = {
 			if(isTouchPointer)return;
 			//var x = e.x||e.pageX;
 			//var width = x - scroll.offsetLeft;
-			var width = e.offsetX;
+			var width;
+			if(touchPlugin){
+				width = e.detail.position.x - scroll.getBoundingClientRect().left;
+			}else{
+				width = e.offsetX;
+			}
 			var total = scroll.offsetWidth||1;
 			progress = width/total;
 			progress = Math.min(Math.max(0, progress), 1);

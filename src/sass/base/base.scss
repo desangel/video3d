@@ -61,8 +61,8 @@ $control-btn-background-size: 32px 32px;
 	left:0;
 	width: 100%;
 	height: $control-height;
-	background-color: $color-control;
-	
+	background-color: $bg-color-control;
+	color: $font-color-control;
 	@include clearfix();
 }
 
