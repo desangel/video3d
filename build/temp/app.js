@@ -2765,8 +2765,9 @@ Control.prototype = {
 		var floating = controlOptions.floating;
 		self.floatingElements = controlOptions.floatingElements;
 		
-		video.setAttribute('webkit-playsinline','');  //行内播放
-		video.setAttribute('playsinline','');  //行内播放
+		video.setAttribute('webkit-playsinline','');  //ios<10行内播放
+		video.setAttribute('playsinline','');  //ios10行内播放
+		video.setAttribute('x5-video-player-type', 'h5');  //android weixin 行内播放
 		video.setAttribute('preload','');
 		
 		renderer.keyframe = function(){
